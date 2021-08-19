@@ -40,6 +40,6 @@ class Route:
 
         channel_id = kwargs.pop("channel_id")
         guild_id = kwargs.pop("guild_id")
-        webhook_id = kwargs.pop("webhook_id")
+        self.webhook_id = kwargs.pop("webhook_id")
 
-        self.bucket = f"{path}:{channel_id}/{guild_id}/{webhook_id}"
+        self.bucket = f"{path}:{channel_id}/{guild_id}/{self.webhook_id}"
