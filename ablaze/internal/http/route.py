@@ -38,8 +38,8 @@ class Route:
         _api_url = api_url or _API_URL
         self.url = _api_url + path.format(**kwargs)
 
-        channel_id = kwargs.pop("channel_id")
-        guild_id = kwargs.pop("guild_id")
-        self.webhook_id = kwargs.pop("webhook_id")
+        channel_id = kwargs.pop("channel_id", None)
+        guild_id = kwargs.pop("guild_id", None)
+        self.webhook_id = kwargs.pop("webhook_id", None)
 
         self.bucket = f"{path}:{channel_id}/{guild_id}/{self.webhook_id}"
