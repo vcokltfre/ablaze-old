@@ -24,6 +24,7 @@ classifiers = [
 python = "^3.8"
 aiohttp = "^3.7.4"
 uvloop = "^0.16.0"
+aiofiles = "^0.7.0"
 
 [tool.poetry.dev-dependencies]
 
