@@ -22,6 +22,6 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 """
 
-import uvloop
+import uvloop as __uvloop
 
-uvloop.install()
+__uvloop.install()
