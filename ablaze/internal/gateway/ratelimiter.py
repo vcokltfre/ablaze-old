@@ -1,20 +1,18 @@
-from asyncio import AbstractEventLoop, Semaphore
+from asyncio import get_running_loop, Semaphore
 
 
 class Ratelimiter:
-    def __init__(self, rate: int, per: int, loop: AbstractEventLoop) -> None:
+    def __init__(self, rate: int, per: int) -> None:
         """A gateway send ratelimiter.
 
         :param rate: The rate at which requests can be made.
         :type rate: int
         :param per: How often the bucket is refilled.
         :type per: int
-        :param loop: The even loop to run on.
-        :type loop: AbstractEventLoop
         """
 
         self.per = per
-        self.loop = loop
+        self.loop = get_running_loop()
 
         self.lock = Semaphore(rate)
 

@@ -1,4 +1,4 @@
-from asyncio import Task, sleep
+from asyncio import Task, sleep, get_running_loop
 from sys import platform
 from time import time
 from typing import Optional
@@ -27,7 +27,7 @@ class Shard:
 
         self.id = id
         self._parent = parent
-        self._loop = parent._loop
+        self._loop = get_running_loop()
 
         self._url = None
         self._ws = None
@@ -43,7 +43,7 @@ class Shard:
 
         self._pacemaker: Optional[Task] = None
 
-        self._send_limiter = Ratelimiter(120, 60, self._loop)
+        self._send_limiter = Ratelimiter(120, 60)
 
     def __repr__(self) -> str:
         return f"<Shard id={self.id} seq={self._seq}>"

@@ -1,4 +1,4 @@
-from asyncio import AbstractEventLoop, get_event_loop, sleep
+from asyncio import get_running_loop, sleep
 from collections import defaultdict
 from typing import Coroutine
 
@@ -16,8 +16,6 @@ class GatewayClient:
         intents: int,
         shard_ids: list = None,
         shard_count: int = None,
-        *,
-        loop: AbstractEventLoop = None,
     ) -> None:
         """A client to connect to the Discord gateway.
 
@@ -29,8 +27,6 @@ class GatewayClient:
         :type shard_ids: list, optional
         :param shard_count: The number of shards to use, defaults to None
         :type shard_count: int, optional
-        :param loop: The event loop to run on, defaults to None
-        :type loop: AbstractEventLoop, optional
         """
 
         self._http = http
@@ -39,7 +35,7 @@ class GatewayClient:
         self._shard_count = shard_count or 1
         self._shard_ids = shard_ids or list(range(self._shard_count))
 
-        self._loop = loop or get_event_loop()
+        self._loop = get_running_loop()
 
         self.shards = [Shard(id, self) for id in self._shard_ids]
 
@@ -55,7 +51,7 @@ class GatewayClient:
         gw = await gateway.get_gateway_bot(self._http)
         limit = gw["session_start_limit"]
 
-        limiter = Ratelimiter(limit["max_concurrency"], 5, self._loop)
+        limiter = Ratelimiter(limit["max_concurrency"], 5)
 
         if not self.shards:
             self.shards = [Shard(id, self) for id in range(gw["shards"])]

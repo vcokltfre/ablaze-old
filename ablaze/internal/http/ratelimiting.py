@@ -1,17 +1,15 @@
-from asyncio import AbstractEventLoop, Event, Lock
+from asyncio import AbstractEventLoop, Event, Lock, get_running_loop
 
 
 class BucketLock:
-    def __init__(self, loop: AbstractEventLoop, lock: Lock) -> None:
+    def __init__(self, lock: Lock) -> None:
         """A per-bucket lock class to lock routes from being requested.
 
-        :param loop: The event loop to run on.
-        :type loop: AbstractEventLoop
         :param lock: The lock to manage.
         :type lock: Lock
         """
 
-        self._loop = loop
+        self._loop = get_running_loop()
         self._lock = lock
         self._deferring = False
 
@@ -38,15 +36,11 @@ class BucketLock:
 
 
 class RateLimitManager:
-    def __init__(self, loop: AbstractEventLoop) -> None:
-        """A ratelimit bucket lock manager.
+    def __init__(self) -> None:
+        """A ratelimit bucket lock manager."""
 
-        :param loop: The event loop to run on.
-        :type loop: AbstractEventLoop
-        """
-
-        self._loop = loop
-        self._global = Event(loop=loop)
+        self._loop = get_running_loop()
+        self._global = Event()
         self._global.set()
 
         self._buckets = {}
@@ -64,7 +58,7 @@ class RateLimitManager:
         if lock := self._buckets.get(bucket):
             return lock
 
-        self._buckets[bucket] = BucketLock(self._loop, Lock(loop=self._loop))
+        self._buckets[bucket] = BucketLock(Lock())
         return self._buckets[bucket]
 
     def clear_global(self, wait: float) -> None:

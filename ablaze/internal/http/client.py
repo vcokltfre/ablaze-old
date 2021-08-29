@@ -1,4 +1,4 @@
-from asyncio import AbstractEventLoop, get_event_loop, sleep
+from asyncio import get_running_loop, sleep
 from collections import defaultdict
 from logging import getLogger
 from typing import (
@@ -80,19 +80,16 @@ async def response_as(response: ClientResponse, format: ResponseFormat) -> Any:
 
 
 class RESTClient:
-    def __init__(self, token: str, *, loop: AbstractEventLoop = None) -> None:
+    def __init__(self, token: str) -> None:
         """An HTTP client to make Discord API calls.
 
         :param token: The API token to use.
         :type token: str
-        :param loop: The event loop to use, defaults to None
-        :type loop: AbstractEventLoop, optional
         """
 
         self._token = token
-        self._loop = loop or get_event_loop()
 
-        self._limiter = RateLimitManager(self._loop)
+        self._limiter = RateLimitManager()
         self._session: Optional[ClientSession] = None
 
         self._status: Mapping[int, Type[HTTPError]] = defaultdict(
