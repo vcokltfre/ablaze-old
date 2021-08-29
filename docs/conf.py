@@ -25,7 +25,7 @@ author = 'vcokltfre'
 master_doc = 'index'
 
 with open('../ablaze/__init__.py', 'r') as fp:
-    version = re.search(r'^__version__\s*=\s*[\'"]([^\'"]*)[\'"]', fp.read(), re.MULTILINE).group(1)
+    version = re.search(r'^__version__\s*=\s*[\'"]([^\'"]*)[\'"]', fp.read(), re.MULTILINE).group(1)  # type: ignore
 
 
 # The full version, including alpha/beta/rc tags
