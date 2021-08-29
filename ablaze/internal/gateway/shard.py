@@ -32,9 +32,7 @@ from .ratelimiter import Ratelimiter
 
 
 class Shard:
-    def __init__(
-        self, id: int, parent: "ablaze.GatewayClient"
-    ) -> None:
+    def __init__(self, id: int, parent: "ablaze.GatewayClient") -> None:
         """A single gateway shard to receive and send events.
 
         :param id: The shard's ID.
