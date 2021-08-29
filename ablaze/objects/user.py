@@ -9,7 +9,7 @@ class User(Snowflake):
     def __init__(self, data: dict) -> None:
         self._raw = data
 
-        self.id: int = data["id"]
+        self.id: int = int(data["id"])
         self.username: str = data["username"]
         self.discriminator: int = int(data["discriminator"])
 
