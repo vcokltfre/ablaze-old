@@ -23,6 +23,7 @@ from collections import defaultdict
 from typing import Coroutine
 
 import ablaze
+from ablaze.internal.http.resources import gateway
 
 from .ratelimiter import Ratelimiter
 from .shard import Shard
@@ -71,13 +72,13 @@ class GatewayClient:
         raise SystemExit(f"Shard error code: {code}")
 
     async def start(self) -> None:
-        gateway = await self._http.get_gateway_bot()
-        limit = gateway["session_start_limit"]
+        gw = await gateway.get_gateway_bot(self._http)
+        limit = gw["session_start_limit"]
 
         limiter = Ratelimiter(limit["max_concurrency"], 5, self._loop)
 
         if not self.shards:
-            self.shards = [Shard(id, self) for id in range(gateway["shards"])]
+            self.shards = [Shard(id, self) for id in range(gw["shards"])]
 
         for shard in self.shards:
             await limiter.wait()

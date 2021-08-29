@@ -18,13 +18,14 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 """
 
-from asyncio import AbstractEventLoop, Task, sleep
+from asyncio import Task, sleep
 from sys import platform
 from time import time
 
 from aiohttp import WSMessage, WSMsgType
 
 import ablaze
+from ablaze.internal.http.resources import gateway
 
 from .constants import GatewayCloseCodes as CloseCodes
 from .constants import GatewayOps
@@ -75,7 +76,7 @@ class Shard:
         """Create a connection to the Discord gateway."""
 
         if not self._url:
-            self._url = (await self._parent._http.get_gateway())["url"]
+            self._url = (await gateway.get_gateway(self._parent._http))["url"]
 
         while True:
             await self.spawn_ws()
