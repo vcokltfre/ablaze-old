@@ -62,7 +62,7 @@ class RESTClient:
         :type loop: AbstractEventLoop, optional
         """
 
-        self.__token = token
+        self._token = token
         self._loop = loop or get_event_loop()
 
         self._limiter = RateLimitManager(self._loop)
@@ -84,16 +84,18 @@ class RESTClient:
         }
 
     @property
+    def _headers(self) -> dict:
+        return {
+            "Authorization": f"Bot {self._token}",
+            "User-Agent": f"DiscordBot (Ablaze https://github.com/vcokltfre/ablaze)",
+            "X-RateLimit-Precision": "milisecond",
+        }
+
+    @property
     def session(self) -> ClientSession:
         if self._session and not self._session.closed:
             return self._session
-        self._session = ClientSession(
-            headers={
-                "Authorization": f"Bot {self.__token}",
-                "User-Agent": f"DiscordBot (Ablaze https://github.com/vcokltfre/ablaze)",
-                "X-RateLimit-Precision": "milisecond",
-            }
-        )
+        self._session = ClientSession(headers=self._headers)
         return self._session
 
     async def request(
@@ -195,3 +197,26 @@ class RESTClient:
                     raise self._status.get(status, self._status["_"])(response)
 
                 await sleep(sleep_for)
+
+    async def spawn_ws(self, url: str):
+        if not self.session or self.session.closed:
+            self.session = ClientSession(headers=self.headers)
+
+        args = {
+            "max_msg_size": 0,
+            "timeout": 60,
+            "autoclose": False,
+            "headers": {"User-Agent": self._headers["User-Agent"]},
+        }
+
+        return await self.session.ws_connect(url, **args)
+
+    async def get_gateway(self) -> dict:
+        route = Route("/gateway")
+
+        return await (await self.request("GET", route)).json()
+
+    async def get_gateway_bot(self) -> dict:
+        route = Route("/gateway/bot")
+
+        return await (await self.request("GET", route)).json()

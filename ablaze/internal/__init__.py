@@ -22,10 +22,13 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 """
 
+from .gateway import GatewayClient, Shard
 from .http import File, RESTClient, Route
 
 __all__ = (
     "File",
     "RESTClient",
     "Route",
+    "GatewayClient",
+    "Shard",
 )

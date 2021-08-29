@@ -1,18 +1,14 @@
 """
 MIT License
-
 Copyright (c) 2021 vcokltfre
-
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal
 in the Software without restriction, including without limitation the rights
 to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
 copies of the Software, and to permit persons to whom the Software is
 furnished to do so, subject to the following conditions:
-
 The above copyright notice and this permission notice shall be included in all
 copies or substantial portions of the Software.
-
 THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
 IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
 FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
@@ -22,16 +18,27 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 """
 
-import uvloop as __uvloop
+from asyncio import AbstractEventLoop, Semaphore
 
-__uvloop.install()
 
-from .internal import File, GatewayClient, RESTClient, Route, Shard
+class Ratelimiter:
+    def __init__(self, rate: int, per: int, loop: AbstractEventLoop) -> None:
+        """A gateway send ratelimiter.
 
-__all__ = (
-    "File",
-    "RESTClient",
-    "Route",
-    "GatewayClient",
-    "Shard",
-)
+        :param rate: The rate at which requests can be made.
+        :type rate: int
+        :param per: How often the bucket is refilled.
+        :type per: int
+        :param loop: The even loop to run on.
+        :type loop: AbstractEventLoop
+        """
+
+        self.per = per
+        self.loop = loop
+
+        self.lock = Semaphore(rate)
+
+    async def wait(self) -> None:
+        await self.lock.acquire()
+
+        self.loop.call_later(self.per, self.lock.release)
