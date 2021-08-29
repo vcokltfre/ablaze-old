@@ -23,6 +23,7 @@ from .objects import (
     UserAvatar,
     UserBanner,
     PublicUserFlags,
+    User,
 )
 
 __all__ = (
@@ -50,4 +51,5 @@ __all__ = (
     "UserAvatar",
     "UserBanner",
     "PublicUserFlags",
+    "User",
 )

@@ -17,6 +17,7 @@ from .assets import (
     UserBanner,
 )
 from .flags import PublicUserFlags
+from .user import User
 
 __all__ = (
     "Snowflake",
@@ -36,4 +37,5 @@ __all__ = (
     "UserAvatar",
     "UserBanner",
     "PublicUserFlags",
+    "User",
 )
