@@ -1,4 +1,4 @@
-from asyncio import get_running_loop, sleep
+from asyncio import get_event_loop, sleep
 from collections import defaultdict
 from typing import Coroutine
 
@@ -35,7 +35,7 @@ class GatewayClient:
         self._shard_count = shard_count or 1
         self._shard_ids = shard_ids or list(range(self._shard_count))
 
-        self._loop = get_running_loop()
+        self._loop = get_event_loop()
 
         self.shards = [Shard(id, self) for id in self._shard_ids]
 

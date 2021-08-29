@@ -1,4 +1,4 @@
-from asyncio import Semaphore, get_running_loop
+from asyncio import Semaphore, get_event_loop
 
 
 class Ratelimiter:
@@ -12,7 +12,7 @@ class Ratelimiter:
         """
 
         self.per = per
-        self.loop = get_running_loop()
+        self.loop = get_event_loop()
 
         self.lock = Semaphore(rate)
 

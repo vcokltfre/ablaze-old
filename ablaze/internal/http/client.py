@@ -1,4 +1,4 @@
-from asyncio import get_running_loop, sleep
+from asyncio import sleep
 from collections import defaultdict
 from logging import getLogger
 from typing import (

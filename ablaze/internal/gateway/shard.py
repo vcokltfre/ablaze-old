@@ -1,4 +1,4 @@
-from asyncio import Task, get_running_loop, sleep
+from asyncio import Task, get_event_loop, sleep
 from sys import platform
 from time import time
 from typing import Optional
@@ -27,7 +27,7 @@ class Shard:
 
         self.id = id
         self._parent = parent
-        self._loop = get_running_loop()
+        self._loop = get_event_loop()
 
         self._url = None
         self._ws = None

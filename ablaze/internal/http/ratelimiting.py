@@ -1,4 +1,4 @@
-from asyncio import AbstractEventLoop, Event, Lock, get_running_loop
+from asyncio import Event, Lock, get_event_loop
 
 
 class BucketLock:
@@ -9,7 +9,7 @@ class BucketLock:
         :type lock: Lock
         """
 
-        self._loop = get_running_loop()
+        self._loop = get_event_loop()
         self._lock = lock
         self._deferring = False
 
@@ -39,7 +39,7 @@ class RateLimitManager:
     def __init__(self) -> None:
         """A ratelimit bucket lock manager."""
 
-        self._loop = get_running_loop()
+        self._loop = get_event_loop()
         self._global = Event()
         self._global.set()
 
