@@ -98,6 +98,66 @@ class RESTClient:
         self._session = ClientSession(headers=self._headers)
         return self._session
 
+    @staticmethod
+    def get_params(**params) -> dict:
+        """Get a dictionary of query string parameters that are not None.
+
+        :return: The dictionary of query string parameters.
+        :rtype: dict
+        """
+
+        return {k: v for k, v in params.items() if v}
+
+    async def get(
+        self,
+        route: Route,
+        files: List[File] = None,
+        json: JSON = None,
+        reason: str = None,
+        qparams: dict = None,
+    ):
+        return await self.request("GET", route, files, json, reason, qparams)
+
+    async def post(
+        self,
+        route: Route,
+        files: List[File] = None,
+        json: JSON = None,
+        reason: str = None,
+        qparams: dict = None,
+    ):
+        return await self.request("POST", route, files, json, reason, qparams)
+
+    async def delete(
+        self,
+        route: Route,
+        files: List[File] = None,
+        json: JSON = None,
+        reason: str = None,
+        qparams: dict = None,
+    ):
+        return await self.request("DELETE", route, files, json, reason, qparams)
+
+    async def patch(
+        self,
+        route: Route,
+        files: List[File] = None,
+        json: JSON = None,
+        reason: str = None,
+        qparams: dict = None,
+    ):
+        return await self.request("PATCH", route, files, json, reason, qparams)
+
+    async def put(
+        self,
+        route: Route,
+        files: List[File] = None,
+        json: JSON = None,
+        reason: str = None,
+        qparams: dict = None,
+    ):
+        return await self.request("PUT", route, files, json, reason, qparams)
+
     async def request(
         self,
         method: HTTPMethod,
@@ -220,9 +280,9 @@ class RESTClient:
     async def get_gateway(self) -> dict:
         route = Route("/gateway")
 
-        return await (await self.request("GET", route)).json()
+        return await (await self.get(route)).json()
 
     async def get_gateway_bot(self) -> dict:
         route = Route("/gateway/bot")
 
-        return await (await self.request("GET", route)).json()
+        return await (await self.get(route)).json()
