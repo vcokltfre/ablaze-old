@@ -10,7 +10,7 @@ async def list_guild_emojis(http: RESTClient, guild_id: int) -> list:
 
 
 async def get_guild_emoji(http: RESTClient, guild_id: int, emoji_id: int) -> dict:
-    route = Route("/guilds/{guild_id}/emojis/{emoji_id}", guild_id, emoji_id)
+    route = Route("/guilds/{guild_id}/emojis/{emoji_id}", guild_id=guild_id, emoji_id=emoji_id)
 
     return await (await http.get(route)).json()
 
