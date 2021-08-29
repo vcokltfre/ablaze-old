@@ -1,7 +1,7 @@
-from typing import Union
+from typing import Union, Optional
 
 from .abc import Snowflake
-from .assets import UserAvatar, DefaultUserAvatar
+from .assets import UserAvatar, DefaultUserAvatar, UserBanner
 from .flags import PublicUserFlags
 
 
@@ -16,5 +16,9 @@ class User(Snowflake):
         avatar = UserAvatar(self.id, data["avatar"]) if data.get("avatar") else DefaultUserAvatar(self.discriminator)
         self.avatar: Union[UserAvatar, DefaultUserAvatar] = avatar
 
+        banner = UserBanner(self.id, data["banner"]) if data.get("banner") else None
+        self.banner: Optional[UserBanner] = banner
+
         self.bot: bool = data.get("bot", False)
         self.flags = PublicUserFlags(data.get("public_flags", 0))
+        self.accent_colour = data.get("accent_colour", 0)
