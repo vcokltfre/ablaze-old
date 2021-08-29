@@ -14,7 +14,7 @@ async def get_guild_audit_log(
     limit: Union[int, _UNSET] = UNSET,
 ) -> dict:
     route = Route("/guilds/{guild_id}/audit-logs", guild_id=guild_id)
-    params = http._get_params(
+    params = http.get_params(
         user_id=user_id, action_type=action_type, before=before, limit=limit
     )
 

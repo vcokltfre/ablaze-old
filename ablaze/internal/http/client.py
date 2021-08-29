@@ -38,7 +38,7 @@ from .route import Route
 logger = getLogger("ablaze.http")
 
 HTTPMethod = Literal["GET", "HEAD", "POST", "DELETE", "PUT", "PATCH"]
-JSON = Union[str, float, int, Dict[str, "JSON"], List["JSON"], bool, None]
+JSON = Union[str, float, int, Dict[str, "JSON"], List["JSON"], None]
 ResponseFormat = Literal["bytes", "text", "json", "none"]
 
 
@@ -128,7 +128,7 @@ class RESTClient:
         return self._session
 
     @staticmethod
-    def _get_params(**params) -> dict:
+    def get_params(**params) -> dict:
         """Get a dictionary of query string or JSON parameters that are not UNSET.
 
         :return: The dictionary of query string or JSON parameters.

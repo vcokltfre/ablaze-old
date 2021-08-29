@@ -34,7 +34,7 @@ async def modify_guild_channel(
     reason: str = None,
 ) -> dict:
     route = Route("/channels/{channel_id}", channel_id=channel_id)
-    params = http._get_params(
+    params = http.get_params(
         name=name,
         type=type,
         position=position,
@@ -66,7 +66,7 @@ async def modify_thread_channel(
     reason: str = None,
 ) -> dict:
     route = Route("/channels/{channel_id}", channel_id=channel_id)
-    params = http._get_params(
+    params = http.get_params(
         name=name,
         archived=archived,
         auto_archive_duration=auto_archive_duration,
@@ -95,7 +95,7 @@ async def get_channel_messages(
     limit: Union[int, _UNSET] = UNSET,
 ) -> list:
     route = Route("/channels/{channel_id}/messages", channel_id=channel_id)
-    params = http._get_params(
+    params = http.get_params(
         around=around,
         before=before,
         after=after,
@@ -130,7 +130,7 @@ async def create_message(
     sticker_ids: Union[list, _UNSET] = UNSET,
 ) -> dict:
     route = Route("/channels/{channel_id}/messages", channel_id=channel_id)
-    params = http._get_params(
+    params = http.get_params(
         content=content,
         tts=tts,
         embeds=embeds,
@@ -203,7 +203,7 @@ async def get_reactions(
         message_id=message_id,
         emoji=quote(emoji),
     )
-    params = http._get_params(after=after, limit=limit)
+    params = http.get_params(after=after, limit=limit)
 
     return await http.get(route, qparams=params)
 
@@ -250,7 +250,7 @@ async def edit_message(
         channel_id=channel_id,
         message_id=message_id,
     )
-    params = http._get_params(
+    params = http.get_params(
         content=content,
         embeds=embeds,
         flags=flags,
@@ -278,7 +278,7 @@ async def bulk_delete_messages(
     http: RESTClient, channel_id: int, messages: list
 ) -> None:
     route = Route("/channels/{channel_id}/messages/bulk-delete", channel_id=channel_id)
-    params = http._get_params(
+    params = http.get_params(
         messages=messages,
     )
 
@@ -300,7 +300,7 @@ async def edit_channel_permissions(
         channel_id=channel_id,
         overwrite_id=overwrite_id,
     )
-    params = http._get_params(
+    params = http.get_params(
         allow=allow,
         deny=deny,
         type=type,
@@ -329,7 +329,7 @@ async def create_channel_invite(
     reason: str = None,
 ) -> dict:
     route = Route("/channels/{channel_id}/invites", channel_id=channel_id)
-    params = http._get_params(
+    params = http.get_params(
         max_age=max_age,
         max_uses=max_uses,
         temporary=temporary,
@@ -358,7 +358,7 @@ async def follow_news_channel(
     http: RESTClient, channel_id: int, webhook_channel_id: int
 ) -> dict:
     route = Route("/channels/{channel_id}/followers", channel_id=channel_id)
-    params = http._get_params(
+    params = http.get_params(
         webhook_channel_id=webhook_channel_id,
     )
 
@@ -415,7 +415,7 @@ async def start_thread_with_message(
         channel_id=channel_id,
         message_id=message_id,
     )
-    params = http._get_params(
+    params = http.get_params(
         name=name,
         auto_archive_duration=auto_archive_duration,
     )
@@ -434,7 +434,7 @@ async def start_thread_without_message(
     reason: str = None,
 ) -> dict:
     route = Route("/channels/{channel_id}/threads", channel_id=channel_id)
-    params = http._get_params(
+    params = http.get_params(
         name=name,
         auto_archive_duration=auto_archive_duration,
         type=type,
@@ -500,7 +500,7 @@ async def list_public_archived_threads(
     route = Route(
         "/channels/{channel_id}/threads/archived/public", channel_id=channel_id
     )
-    params = http._get_params(
+    params = http.get_params(
         before=before,
         limit=limit,
     )
@@ -517,7 +517,7 @@ async def list_private_archived_threads(
     route = Route(
         "/channels/{channel_id}/threads/archived/private", channel_id=channel_id
     )
-    params = http._get_params(
+    params = http.get_params(
         before=before,
         limit=limit,
     )
@@ -535,7 +535,7 @@ async def list_joined_private_archived_threads(
         "/channels/{channel_id}/users/@me/threads/archived/private",
         channel_id=channel_id,
     )
-    params = http._get_params(
+    params = http.get_params(
         before=before,
         limit=limit,
     )

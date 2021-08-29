@@ -29,7 +29,7 @@ async def create_guild_emoji(
     reason: str = None,
 ) -> dict:
     route = Route("/guilds/{guild_id}/emojis", guild_id=guild_id)
-    params = http._get_params(
+    params = http.get_params(
         name=name,
         image=image,
         roles=roles,
@@ -50,7 +50,7 @@ async def modify_guild_emoji(
     route = Route(
         "/guilds/{guild_id}/emojis/{emoji_id}", guild_id=guild_id, emoji_id=emoji_id
     )
-    params = http._get_params(
+    params = http.get_params(
         name=name,
         roles=roles,
     )
