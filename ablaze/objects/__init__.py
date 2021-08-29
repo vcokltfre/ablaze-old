@@ -1,3 +1,37 @@
 from .abc import Snowflake
+from .assets import (
+    AchievementIcon,
+    ApplicationAsset,
+    ApplicationCover,
+    ApplicationIcon,
+    DefaultUserAvatar,
+    Emoji,
+    GuildBanner,
+    GuildDiscoverySplash,
+    GuildIcon,
+    GuildSplash,
+    Sticker,
+    StickerPackBanner,
+    TeamIcon,
+    UserAvatar,
+    UserBanner,
+)
 
-__all__ = ("Snowflake",)
+__all__ = (
+    "Snowflake",
+    "AchievementIcon",
+    "ApplicationAsset",
+    "ApplicationCover",
+    "ApplicationIcon",
+    "DefaultUserAvatar",
+    "Emoji",
+    "GuildBanner",
+    "GuildDiscoverySplash",
+    "GuildIcon",
+    "GuildSplash",
+    "Sticker",
+    "StickerPackBanner",
+    "TeamIcon",
+    "UserAvatar",
+    "UserBanner",
+)

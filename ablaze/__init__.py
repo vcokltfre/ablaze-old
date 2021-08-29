@@ -5,7 +5,24 @@ __uvloop.install()
 from .client import AblazeClient
 from .constants import AuditLogEventType
 from .internal import File, GatewayClient, RESTClient, Route, Shard
-from .objects import Snowflake
+from .objects import (
+    AchievementIcon,
+    ApplicationAsset,
+    ApplicationCover,
+    ApplicationIcon,
+    DefaultUserAvatar,
+    Emoji,
+    GuildBanner,
+    GuildDiscoverySplash,
+    GuildIcon,
+    GuildSplash,
+    Snowflake,
+    Sticker,
+    StickerPackBanner,
+    TeamIcon,
+    UserAvatar,
+    UserBanner,
+)
 
 __all__ = (
     "AuditLogEventType",
@@ -16,4 +33,19 @@ __all__ = (
     "Shard",
     "AblazeClient",
     "Snowflake",
+    "AchievementIcon",
+    "ApplicationAsset",
+    "ApplicationCover",
+    "ApplicationIcon",
+    "DefaultUserAvatar",
+    "Emoji",
+    "GuildBanner",
+    "GuildDiscoverySplash",
+    "GuildIcon",
+    "GuildSplash",
+    "Sticker",
+    "StickerPackBanner",
+    "TeamIcon",
+    "UserAvatar",
+    "UserBanner",
 )
