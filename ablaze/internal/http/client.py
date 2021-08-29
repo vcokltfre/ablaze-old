@@ -286,3 +286,18 @@ class RESTClient:
         route = Route("/gateway/bot")
 
         return await (await self.get(route)).json()
+
+    async def get_guild_audit_log(
+        self,
+        guild_id: int,
+        user_id: int = None,
+        action_type: int = None,
+        before: int = None,
+        limit: int = None,
+    ) -> dict:
+        route = Route("/guilds/{guild_id}/audit-logs", guild_id=guild_id)
+        params = self.get_params(
+            user_id=user_id, action_type=action_type, before=before, limit=limit
+        )
+
+        return await (await self.get(route, qparams=params)).json()
