@@ -22,15 +22,8 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 """
 
-from .gateway import GatewayClient, Shard
-from .http import File, RESTClient, Route
-from .utils import UNSET
+class UNSET:
+    """Represents an unset value in a function signature."""
 
-__all__ = (
-    "File",
-    "RESTClient",
-    "Route",
-    "GatewayClient",
-    "Shard",
-    "UNSET",
-)
+    def __bool__(self) -> bool:
+        return False
