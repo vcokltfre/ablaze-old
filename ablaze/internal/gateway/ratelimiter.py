@@ -1,4 +1,4 @@
-from asyncio import get_running_loop, Semaphore
+from asyncio import Semaphore, get_running_loop
 
 
 class Ratelimiter:

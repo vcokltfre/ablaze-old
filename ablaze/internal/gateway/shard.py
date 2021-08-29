@@ -1,4 +1,4 @@
-from asyncio import Task, sleep, get_running_loop
+from asyncio import Task, get_running_loop, sleep
 from sys import platform
 from time import time
 from typing import Optional
