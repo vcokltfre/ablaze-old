@@ -1,6 +1,7 @@
 from asyncio import Task, sleep
 from sys import platform
 from time import time
+from typing import Optional
 
 from aiohttp import WSMessage, WSMsgType
 
@@ -40,7 +41,7 @@ class Shard:
         self._recieved_ack = True
         self.latency = None
 
-        self._pacemaker: Task = None
+        self._pacemaker: Optional[Task] = None
 
         self._send_limiter = Ratelimiter(120, 60, self._loop)
 
@@ -87,7 +88,7 @@ class Shard:
 
         self._loop.create_task(self._parent.dispatch(self, "outbound", data))
         try:
-            await self._ws.send_json(data)
+            await self._ws.send_json(data)  # type: ignore
         except ConnectionResetError:
             exit(1)
 
@@ -117,7 +118,7 @@ class Shard:
             {
                 "op": GatewayOps.RESUME,
                 "d": {
-                    "token": self._parent.http.token,
+                    "token": self._parent._http._token,
                     "session_id": self._session,
                     "seq": self._seq,
                 },
@@ -149,7 +150,7 @@ class Shard:
             )
             await self.identify()
         elif op == GatewayOps.ACK:
-            self.latency = time() - self._last_heartbeat_send
+            self.latency = time() - self._last_heartbeat_send  # type: ignore
             self._recieved_ack = True
         elif op == GatewayOps.RECONNECT:
             await self.close()
@@ -185,7 +186,7 @@ class Shard:
     async def start_reader(self) -> None:
         """Start a loop constantly reading from the gateway."""
 
-        async for message in self._ws:
+        async for message in self._ws:  # type: ignore
             message: WSMessage
 
             if message.type == WSMsgType.TEXT:
@@ -196,7 +197,7 @@ class Shard:
 
                 await self.dispatch(message_data)
 
-        await self.handle_disconnect(self._ws.close_code)
+        await self.handle_disconnect(self._ws.close_code)  # type: ignore
 
     async def start_pacemaker(self, delay: float) -> None:
         """A loop to constantly heartbeat at an interval given by the gateway."""

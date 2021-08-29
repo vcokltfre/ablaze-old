@@ -1,6 +1,18 @@
 from asyncio import AbstractEventLoop, get_event_loop, sleep
+from collections import defaultdict
 from logging import getLogger
-from typing import List, Literal, Union
+from typing import (
+    Any,
+    Dict,
+    List,
+    Literal,
+    Mapping,
+    Optional,
+    Sequence,
+    Type,
+    Union,
+    overload,
+)
 
 from aiohttp import ClientResponse, ClientSession, FormData
 
@@ -18,7 +30,7 @@ from ...errors import (
     Unauthorized,
     UnprocessableEntity,
 )
-from ..utils import UNSET
+from ..utils import _UNSET, UNSET
 from .file import File
 from .ratelimiting import RateLimitManager
 from .route import Route
@@ -26,7 +38,45 @@ from .route import Route
 logger = getLogger("ablaze.http")
 
 HTTPMethod = Literal["GET", "HEAD", "POST", "DELETE", "PUT", "PATCH"]
-JSON = Union[str, float, int, dict, list, bool]
+JSON = Union[str, float, int, Dict[str, "JSON"], List["JSON"], bool, None]
+ResponseFormat = Literal["bytes", "text", "json", "none"]
+
+
+@overload
+async def response_as(response: ClientResponse, format: Literal["bytes"]) -> bytes:
+    ...
+
+
+@overload
+async def response_as(response: ClientResponse, format: Literal["text"]) -> str:
+    ...
+
+
+@overload
+async def response_as(response: ClientResponse, format: Literal["json"]) -> JSON:
+    ...
+
+
+@overload
+async def response_as(response: ClientResponse, format: Literal["none"]) -> None:
+    ...
+
+
+async def response_as(response: ClientResponse, format: ResponseFormat) -> Any:
+    """Get the response as a specific format, and close the response."""
+
+    if format == "bytes":
+        data = await response.read()
+    elif format == "text":
+        data = await response.text()
+    elif format == "json":
+        data = await response.json()
+    elif format == "none":
+        data = None
+
+    response.close()
+
+    return data
 
 
 class RESTClient:
@@ -43,22 +93,24 @@ class RESTClient:
         self._loop = loop or get_event_loop()
 
         self._limiter = RateLimitManager(self._loop)
-        self._session: ClientSession = None
+        self._session: Optional[ClientSession] = None
 
-        self._status = {
-            400: BadRequest,
-            401: Unauthorized,
-            403: Forbidden,
-            404: NotFound,
-            405: MethodNotAllowed,
-            422: UnprocessableEntity,
-            429: TooManyRequests,
-            500: ServerError,
-            502: BadGateway,
-            503: ServiceUnavailable,
-            504: GatewayTimeout,
-            "_": HTTPError,
-        }
+        self._status: Mapping[int, Type[HTTPError]] = defaultdict(
+            lambda: HTTPError,
+            {
+                400: BadRequest,
+                401: Unauthorized,
+                403: Forbidden,
+                404: NotFound,
+                405: MethodNotAllowed,
+                422: UnprocessableEntity,
+                429: TooManyRequests,
+                500: ServerError,
+                502: BadGateway,
+                503: ServiceUnavailable,
+                504: GatewayTimeout,
+            },
+        )
 
     @property
     def _headers(self) -> dict:
@@ -88,62 +140,68 @@ class RESTClient:
     async def get(
         self,
         route: Route,
-        files: List[File] = None,
-        json: JSON = None,
-        reason: str = None,
-        qparams: dict = None,
-    ):
-        return await self.request("GET", route, files, json, reason, qparams)
+        files: Optional[Sequence[Union[File, _UNSET]]] = None,
+        json: Union[JSON, _UNSET] = UNSET,
+        reason: Optional[str] = None,
+        qparams: Optional[dict] = None,
+        format: ResponseFormat = "json",
+    ) -> Any:
+        return await self.request("GET", route, files, json, reason, qparams, format)
 
     async def post(
         self,
         route: Route,
-        files: List[File] = None,
-        json: JSON = None,
-        reason: str = None,
-        qparams: dict = None,
-    ):
-        return await self.request("POST", route, files, json, reason, qparams)
+        files: Optional[Sequence[Union[File, _UNSET]]] = None,
+        json: Union[JSON, _UNSET] = UNSET,
+        reason: Optional[str] = None,
+        qparams: Optional[dict] = None,
+        format: ResponseFormat = "json",
+    ) -> Any:
+        return await self.request("POST", route, files, json, reason, qparams, format)
 
     async def delete(
         self,
         route: Route,
-        files: List[File] = None,
-        json: JSON = None,
-        reason: str = None,
-        qparams: dict = None,
-    ):
-        return await self.request("DELETE", route, files, json, reason, qparams)
+        files: Optional[Sequence[Union[File, _UNSET]]] = None,
+        json: Union[JSON, _UNSET] = UNSET,
+        reason: Optional[str] = None,
+        qparams: Optional[dict] = None,
+        format: ResponseFormat = "json",
+    ) -> Any:
+        return await self.request("DELETE", route, files, json, reason, qparams, format)
 
     async def patch(
         self,
         route: Route,
-        files: List[File] = None,
-        json: JSON = None,
-        reason: str = None,
-        qparams: dict = None,
-    ):
-        return await self.request("PATCH", route, files, json, reason, qparams)
+        files: Optional[Sequence[Union[File, _UNSET]]] = None,
+        json: Union[JSON, _UNSET] = UNSET,
+        reason: Optional[str] = None,
+        qparams: Optional[dict] = None,
+        format: ResponseFormat = "json",
+    ) -> Any:
+        return await self.request("PATCH", route, files, json, reason, qparams, format)
 
     async def put(
         self,
         route: Route,
-        files: List[File] = None,
-        json: JSON = None,
-        reason: str = None,
-        qparams: dict = None,
-    ):
-        return await self.request("PUT", route, files, json, reason, qparams)
+        files: Optional[Sequence[Union[File, _UNSET]]] = None,
+        json: Union[JSON, _UNSET] = UNSET,
+        reason: Optional[str] = None,
+        qparams: Optional[dict] = None,
+        format: ResponseFormat = "json",
+    ) -> Any:
+        return await self.request("PUT", route, files, json, reason, qparams, format)
 
     async def request(
         self,
         method: HTTPMethod,
         route: Route,
-        files: List[File] = None,
-        json: JSON = None,
-        reason: str = None,
-        qparams: dict = None,
-    ) -> ClientResponse:
+        files: Optional[Sequence[Union[File, _UNSET]]] = None,
+        json: Union[JSON, _UNSET] = UNSET,
+        reason: Optional[str] = None,
+        qparams: Optional[dict] = None,
+        format: ResponseFormat = "json",
+    ) -> Any:
         """Make a request to the Discord API, following ratelimits.
 
         :param method: The HTTP method to use.
@@ -158,6 +216,8 @@ class RESTClient:
         :type reason: str, optional
         :param qparams: The query parameters for the request, defaults to None
         :type qparams: dict, optional
+        :param format: The format to return the response in, defaults to 'json'
+        :type format: ResponseFormat, optional
         :return: The aiohttp ClientResponse of the request.
         :rtype: ClientResponse
         """
@@ -179,20 +239,20 @@ class RESTClient:
                 data = FormData()
 
                 for file in files:
-                    if attempt:
-                        file.reset()
-
                     if not isinstance(file, File):
                         raise TypeError(
-                            f"Files must be of type ablaze.File, not {file.__qualname__}"
+                            f"Files must be of type ablaze.File, not {file.__class__.__qualname__}"
                         )
+
+                    if attempt:
+                        file.reset()
 
                     data.add_field(
                         f"file_{file.filename}", file.file, filename=file.filename
                     )
 
                 params["data"] = data
-            elif json:
+            elif json is not UNSET:
                 params["json"] = json
 
             bucket = await self._limiter.get_lock(route.bucket)
@@ -215,7 +275,7 @@ class RESTClient:
                     bucket.defer(rl_reset_after)
 
                 if 200 <= status <= 300:
-                    return response
+                    return await response_as(response, format)
 
                 sleep_for = 0
 
@@ -237,17 +297,14 @@ class RESTClient:
                     sleep_for = 1 + attempt * 2
 
                 else:
-                    raise self._status.get(status, self._status["_"])(response)
+                    raise self._status.get(status, self._status[0])(response)
 
                 if attempt == 2:
-                    raise self._status.get(status, self._status["_"])(response)
+                    raise self._status.get(status, self._status[0])(response)
 
                 await sleep(sleep_for)
 
     async def spawn_ws(self, url: str):
-        if not self.session or self.session.closed:
-            self.session = ClientSession(headers=self.headers)
-
         args = {
             "max_msg_size": 0,
             "timeout": 60,
