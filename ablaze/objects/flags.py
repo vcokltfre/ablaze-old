@@ -22,48 +22,48 @@ class PublicUserFlags(BitField):
 
     @property
     def PARTNERED_SERVER_OWNER(self) -> bool:
-        return bool(self[0])
+        return bool(self[1])
 
     @property
     def HYPESQUAD_EVENTS(self) -> bool:
-        return bool(self[0])
+        return bool(self[2])
 
     @property
     def BUG_HUNTER_LEVEL_1(self) -> bool:
-        return bool(self[0])
+        return bool(self[3])
 
     @property
     def HOUSE_BRAVERY(self) -> bool:
-        return bool(self[0])
+        return bool(self[6])
 
     @property
     def HOUSE_BRILLIANCE(self) -> bool:
-        return bool(self[0])
+        return bool(self[7])
 
     @property
     def HOUSE_BALANCE(self) -> bool:
-        return bool(self[0])
+        return bool(self[8])
 
     @property
     def EARLY_SUPPORTER(self) -> bool:
-        return bool(self[0])
+        return bool(self[9])
 
     @property
     def TEAM_USER(self) -> bool:
-        return bool(self[0])
+        return bool(self[10])
 
     @property
     def BUG_HUNTER_LEVEL_2(self) -> bool:
-        return bool(self[0])
+        return bool(self[14])
 
     @property
     def VERIFIED_BOT(self) -> bool:
-        return bool(self[0])
+        return bool(self[16])
 
     @property
     def EARLY_VERIFIED_BOT_DEVELOPER(self) -> bool:
-        return bool(self[0])
+        return bool(self[17])
 
     @property
     def DISCORD_CERTIFIED_MODERATOR(self) -> bool:
-        return bool(self[0])
+        return bool(self[18])
