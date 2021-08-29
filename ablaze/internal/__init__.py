@@ -24,9 +24,7 @@ SOFTWARE.
 
 from .gateway import GatewayClient, Shard
 from .http import File, RESTClient, Route
-from .utils import UNSET as _UNSET
 
-UNSET = _UNSET()
 
 __all__ = (
     "File",
@@ -34,5 +32,4 @@ __all__ = (
     "Route",
     "GatewayClient",
     "Shard",
-    "UNSET",
 )
