@@ -105,6 +105,7 @@ class RESTClient:
         files: List[File] = None,
         json: JSON = None,
         reason: str = None,
+        qparams: dict = None,
     ) -> ClientResponse:
         """Make a request to the Discord API, following ratelimits.
 
@@ -118,12 +119,17 @@ class RESTClient:
         :type json: JSON, optional
         :param reason: The audit log reason for applicable actions, defaults to None
         :type reason: str, optional
+        :param qparams: The query parameters for the request, defaults to None
+        :type qparams: dict, optional
         :return: The aiohttp ClientResponse of the request.
         :rtype: ClientResponse
         """
 
         headers = {}
         params = {}
+
+        if qparams:
+            params["params"] = qparams
 
         if reason:
             headers["X-Audit-Log-Reason"] = reason
