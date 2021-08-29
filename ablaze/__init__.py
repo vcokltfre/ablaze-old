@@ -2,6 +2,10 @@ import uvloop as __uvloop
 
 __uvloop.install()
 
+
+__version__ = '0.0.1'
+
+
 from .client import AblazeClient
 from .constants import AuditLogEventType
 from .internal import File, GatewayClient, RESTClient, Route, Shard
