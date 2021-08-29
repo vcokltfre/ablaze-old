@@ -13,3 +13,10 @@ Gateway Client
 .. autoclass:: GatewayClient
     :members:
 
+
+REST Client
+-----------
+
+.. autoclass:: RESTClient
+	:members:
+
