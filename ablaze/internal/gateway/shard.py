@@ -50,13 +50,13 @@ class Shard:
     async def spawn_ws(self) -> None:
         """Spawn the websocket connection to the gateway."""
 
+        if not self._url:
+            self._url = (await gateway.get_gateway(self._parent._http))["url"]
+
         self._ws = await self._parent._http.spawn_ws(self._url)
 
     async def connect(self) -> None:
         """Create a connection to the Discord gateway."""
-
-        if not self._url:
-            self._url = (await gateway.get_gateway(self._parent._http))["url"]
 
         while True:
             await self.spawn_ws()
