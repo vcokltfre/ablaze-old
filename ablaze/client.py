@@ -1,11 +1,13 @@
 from asyncio import get_event_loop
 from asyncio.events import get_event_loop
 
-from .internal import RESTClient, GatewayClient
+from .internal import GatewayClient, RESTClient
 
 
 class AblazeClient:
-    def __init__(self, token: str, intents: int, shard_count: int = None, shard_ids: list = None) -> None:
+    def __init__(
+        self, token: str, intents: int, shard_count: int = None, shard_ids: list = None
+    ) -> None:
         self._loop = get_event_loop()
 
         self._http = RESTClient(token)
