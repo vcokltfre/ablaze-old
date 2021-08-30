@@ -1,7 +1,7 @@
-from enum import IntFlag
+from enum import IntEnum
 
 
-class AuditLogEventType(IntFlag):
+class AuditLogEventType(IntEnum):
     GUILD_UPDATE = 1
     CHANNEL_CREATE = 10
     CHANNEL_UPDATE = 11

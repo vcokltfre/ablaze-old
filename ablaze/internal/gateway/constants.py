@@ -1,7 +1,7 @@
-from enum import IntFlag
+from enum import IntEnum
 
 
-class GatewayOps(IntFlag):
+class GatewayOps(IntEnum):
     DISPATCH = 0
     HEARTBEAT = 1
     IDENTIFY = 2
@@ -15,7 +15,7 @@ class GatewayOps(IntFlag):
     ACK = 11
 
 
-class GatewayCloseCodes(IntFlag):
+class GatewayCloseCodes(IntEnum):
     UNKNOWN_ERROR = 4000
     UNKNOWN_OPCODE = 4001
     DECODE_ERROR = 4002
