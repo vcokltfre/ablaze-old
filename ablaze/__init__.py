@@ -1,6 +1,9 @@
-import uvloop as __uvloop
-
-__uvloop.install()
+try:
+    raise ImportError()
+    import uvloop as __uvloop
+    __uvloop.install()
+except ImportError:
+    pass
 
 
 __version__ = '0.0.1'

@@ -1,3 +1,4 @@
+from dataclasses import dataclass
 from typing import Union, Optional
 
 from .abc import Snowflake
@@ -5,20 +6,48 @@ from .assets import UserAvatar, DefaultUserAvatar, UserBanner
 from .flags import PublicUserFlags
 
 
+@dataclass(frozen=True)
 class User(Snowflake):
-    def __init__(self, data: dict) -> None:
-        self._raw = data
+    id: int
+    username: str
+    discriminator: int
+    avatar: Optional[UserAvatar]
+    default_avatar: DefaultUserAvatar
+    banner: Optional[UserBanner]
+    bot: bool
+    public_flags: PublicUserFlags
+    accent_colour: int
 
-        self.id: int = int(data["id"])
-        self.username: str = data["username"]
-        self.discriminator: int = int(data["discriminator"])
+    @classmethod
+    def from_json(cls, json: dict) -> "User":
+        id = int(json["id"])
+        discriminator = int(json["discriminator"])
 
-        avatar = UserAvatar(self.id, data["avatar"]) if data.get("avatar") else DefaultUserAvatar(self.discriminator)
-        self.avatar: Union[UserAvatar, DefaultUserAvatar] = avatar
+        avatar = None
+        if avatar_hash := json.get("avatar"):
+            avatar = UserAvatar(int(id), avatar_hash)
 
-        banner = UserBanner(self.id, data["banner"]) if data.get("banner") else None
-        self.banner: Optional[UserBanner] = banner
+        banner = None
+        if banner_hash := json.get("banner"):
+            banner = UserBanner(int(id), banner_hash)
 
-        self.bot: bool = data.get("bot", False)
-        self.flags = PublicUserFlags(data.get("public_flags", 0))
-        self.accent_colour = data.get("accent_colour", 0)
+        return cls(
+            id=id,
+            username=json["username"],
+            discriminator=discriminator,
+            avatar=avatar,
+            default_avatar=DefaultUserAvatar(discriminator),
+            banner=banner,
+            bot=json.get("bot", False),
+            public_flags=PublicUserFlags(json.get("public_flags", 0)),
+            accent_colour=json.get("accent_colour", 0)
+        )
+
+    def __str__(self) -> str:
+        return f"{self.username}#{self.discriminator}"
+
+    def __hash__(self) -> int:
+        return hash(self.id)
+
+    def __eq__(self, other: "User") -> bool:
+        return other.id == self.id
