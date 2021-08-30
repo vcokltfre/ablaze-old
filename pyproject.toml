@@ -26,9 +26,11 @@ aiohttp = "^3.7.4"
 aiofiles = "^0.7.0"
 
 [tool.poetry.dev-dependencies]
+Sphinx = "^4.1.2"
+sphinxcontrib-trio = "^1.1.2"
+furo = "^2021.8.17-beta.43"
 
 [tool.poetry.extras]
-docs = ["sphinx", "sphinxcontrib-trio"]
 uvloop = ["uvloop"]
 
 [build-system]
