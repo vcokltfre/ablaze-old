@@ -232,8 +232,8 @@ class RESTClient:
         :type qparams: dict, optional
         :param format: The format to return the response in, defaults to 'json'
         :type format: ResponseFormat, optional
-        :return: The aiohttp ClientResponse of the request.
-        :rtype: ClientResponse
+        :return: The response, formatted according to the `format` argument
+        :rtype: Any
         """
 
         headers = {}
