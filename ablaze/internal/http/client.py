@@ -15,6 +15,7 @@ from typing import (
 )
 
 from aiohttp import ClientResponse, ClientSession, FormData
+from attr import dataclass
 
 from ...errors import (
     BadGateway,
@@ -32,7 +33,7 @@ from ...errors import (
 )
 from ..utils import _UNSET, UNSET
 from .file import File
-from .ratelimiting import RateLimitManager
+from .ratelimiting import BucketLock, RateLimitManager
 from .route import Route
 
 logger = getLogger("ablaze.http")
@@ -79,6 +80,22 @@ async def response_as(response: ClientResponse, format: ResponseFormat) -> Any:
     return data
 
 
+@dataclass
+class _Request:
+    method: HTTPMethod
+    route: Route
+    headers: Dict[str, str]
+    params: Dict[str, Any]
+    files: Sequence[File]
+    json: Any
+
+
+@dataclass
+class _Response:
+    raw: ClientResponse
+    successful: bool
+
+
 class RESTClient:
     def __init__(self, token: str) -> None:
         """An HTTP client to make Discord API calls.
@@ -92,7 +109,7 @@ class RESTClient:
         self._limiter = RateLimitManager()
         self._session: Optional[ClientSession] = None
 
-        self._status: Mapping[int, Type[HTTPError]] = defaultdict(
+        self._status_to_error_type: Mapping[int, Type[HTTPError]] = defaultdict(
             lambda: HTTPError,
             {
                 400: BadRequest,
@@ -228,78 +245,78 @@ class RESTClient:
         if reason:
             headers["X-Audit-Log-Reason"] = reason
 
-        if files:
-            files = [file for file in files if file is not UNSET]
+        if files is not None:
+            files = [file for file in files if not isinstance(file, _UNSET)]
 
-        for attempt in range(3):
-            if files:
-                data = FormData()
+        ATTEMPT_COUNT = 3
 
-                for file in files:
-                    if not isinstance(file, File):
-                        raise TypeError(
+        for attempt in range(ATTEMPT_COUNT):
+            req = _Request(method, route, headers, params, files or (), json)
+            resp = await self._attempt_request(req)
+
+            if resp.successful:
+                return await response_as(resp.raw, format)
+
+            if attempt == ATTEMPT_COUNT - 1:
+                raise self._status_to_error_type[resp.raw.status](resp.raw)
+
+            await sleep(1 + attempt * 2)
+
+    async def _attempt_request(self, req: _Request) -> _Response:
+        if req.files:
+            data = FormData()
+
+            for file in req.files:
+                if not isinstance(file, File):
+                    raise TypeError(
                             f"Files must be of type ablaze.File, not {file.__class__.__qualname__}"
                         )
-
-                    if attempt:
-                        file.reset()
-
-                    data.add_field(
-                        f"file_{file.filename}", file.file, filename=file.filename
-                    )
-
-                params["data"] = data
-            elif json is not UNSET:
-                params["json"] = json
-
-            bucket = await self._limiter.get_lock(route.bucket)
-
-            async with bucket:
-                response = await self.session.request(
-                    method,
-                    route.url,
-                    headers=headers,
-                    **params,
+                file.reset()
+                data.add_field(
+                    f"file_{file.filename}", file.file, filename=file.filename
                 )
+            req.params["data"] = data
+        elif req.json is not UNSET:
+            req.params["json"] = req.json
 
-                status = response.status
-                resp_headers = response.headers
+        bucket = await self._limiter.get_lock(req.route.bucket)
 
-                rl_reset_after = float(resp_headers.get("X-RateLimit-Reset-After", 0))
-                rl_bucket_remaining = int(resp_headers.get("X-RateLimit-Remaining", 1))
+        async with bucket:
+            return await self._make_rate_limited_request(req, bucket)
 
-                if status != 429 and rl_bucket_remaining:
-                    bucket.defer(rl_reset_after)
+    async def _make_rate_limited_request(self, req: _Request, bucket: BucketLock) -> _Response:
+        response = await self.session.request(
+            req.method,
+            req.route.url,
+            headers=req.headers,
+            **req.params,
+        )
 
-                if 200 <= status <= 300:
-                    return await response_as(response, format)
+        status = response.status
+        headers = response.headers
 
-                sleep_for = 0
+        rl_reset_after = float(headers.get("X-RateLimit-Reset-After", 0))
+        rl_bucket_remaining = int(headers.get("X-RateLimit-Remaining", 1))
 
-                if status == 429:
-                    if not headers.get("Via"):
-                        pass  # TODO: cf ratelimited
+        if 200 <= status <= 300:
+            if rl_bucket_remaining > 0:
+                bucket.defer(rl_reset_after)
+            return _Response(response, successful=True)
+        elif status == 429:
+            if not req.headers.get("Via"):
+                pass  # TODO: cf ratelimited
 
-                    data = await response.json()
+            json = await response.json()
 
-                    is_global = data.get("global", False)
-                    retry_after = data["retry_after"]
+            is_global = json.get("global", False)
+            retry_after = json["retry_after"]
 
-                    if is_global:
-                        self._limiter.clear_global(retry_after)
-                    else:
-                        bucket.defer(retry_after)
+            if is_global:
+                self._limiter.clear_global(retry_after)
+            else:
+                bucket.defer(retry_after)
 
-                elif status >= 500:
-                    sleep_for = 1 + attempt * 2
-
-                else:
-                    raise self._status.get(status, self._status[0])(response)
-
-                if attempt == 2:
-                    raise self._status.get(status, self._status[0])(response)
-
-                await sleep(sleep_for)
+        return _Response(response, successful=False)
 
     async def spawn_ws(self, url: str):
         args = {
