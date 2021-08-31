@@ -17,3 +17,4 @@ class AblazeClient:
         """Make a blocking call to start the bot."""
 
         self._loop.run_until_complete(self._gateway.start())
+        self._loop.run_forever()
