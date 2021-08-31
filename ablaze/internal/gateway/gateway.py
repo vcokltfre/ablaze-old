@@ -61,7 +61,7 @@ class GatewayClient:
             self._loop.create_task(shard.connect())
 
         while True:
-            await sleep(0)
+            await sleep(0.1)
 
     async def dispatch(self, shard: Shard, direction: str, event: dict) -> None:
         name = event.get("t") or f"OP_{event['op']}"

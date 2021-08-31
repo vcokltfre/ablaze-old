@@ -1,8 +1,13 @@
+import asyncio
+import warnings
 from ablaze.objects.permissions import PermissionFlags
 from datetime import datetime
 from ablaze.objects.user import User
 from enum import IntEnum
-from typing import Any, Callable, Dict, Iterable, Optional, Type, TypeVar, Union
+from typing import (
+    Any, AsyncIterator, Awaitable, Callable, ContextManager, Dict,
+    Iterable, Optional, Protocol, Sequence, Type, TypeVar, Union, overload
+)
 from ablaze.internal.utils import _UNSET, UNSET
 from ablaze.internal.http.resources import channel as res
 from ablaze.internal.http.client import RESTClient
@@ -23,15 +28,115 @@ def _nullmap(optional: Optional[_T], fn: Callable[[_T], _R]) -> Optional[_R]:
     return fn(optional)
 
 
+def _extract_int(obj: Union[Snowflake, int]) -> int:
+    if isinstance(obj, int):
+        return obj
+    return obj.id
+
+
+def channel_from_json(state: "State", json: dict) -> "Channel":
+    channel_type = _CHANNEL_TYPE_TO_CLASS[json["type"]]
+    return channel_type.from_json(state, json)
+
+
+### <Stubs>
+# These are stubs for classes that are not yet implemented.
+@dataclass(frozen=True)
+class Message(Snowflake):
+    id: int
+    text: Optional[str]
+
+    @staticmethod
+    def from_json(json: dict) -> "Message":
+        return Message(
+            id=int(json["id"]),
+            text=json.get("content")
+        )
+
+
+class Member(Snowflake):
+    id: int
+
+
+class Guild(Snowflake):
+    id: int
+
+
+class Cache(Protocol):
+    def get_guild(self, id: int) -> Optional[Guild]: ...
+    def get_channel(self, id: int) -> Optional["Channel"]: ...
+
+### </Stub>
+
+
+class BaseMessageContent(ABC):
+    @abstractmethod
+    def to_json(self) -> dict: ...
+
+    def in_reply_to(self, to: Union[Snowflake, int]) -> "MessageContentWithReference":
+        return MessageContentWithReference(self, to)
+
+
+@dataclass(frozen=True)
+class MessageContent(BaseMessageContent):
+    text: Optional[str] = None
+    embeds: Optional[Sequence[Any]] = None  # TODO: embeds
+    allowed_mentions: Optional[Any] = None  # TODO: allowed mentions
+    components: Optional[Sequence[Any]] = None  # TODO: component
+    stickers: Optional[Sequence[Union[Snowflake, int]]] = None
+    tts: Optional[bool] = False
+
+    def __post_init__(self):
+        if not (self.text or self.embeds or self.stickers):
+            raise ValueError("You must provideYou'll  at least one of {text, stickers, embeds}")
+
+    def to_json(self) -> dict:
+        json = {}
+        if self.text:
+            json["content"] = self.text
+        if self.embeds:
+            json["embeds"] = [embed for embed in self.embeds]
+        if self.allowed_mentions:
+            json["allowed_mentions"] = self.allowed_mentions
+        if self.components:
+            json["components"] = [component for component in self.components]
+        if self.stickers:
+            json["sticker_ids"] = [_extract_int(sticker) for sticker in self.stickers]
+        if self.tts is not None:
+            json["tts"] = self.tts
+        return json
+
+
+@dataclass(frozen=True)
+class MessageContentWithReference(BaseMessageContent):
+    base: BaseMessageContent
+    message_reference: Union[Snowflake, int]
+
+    def to_json(self) -> dict:
+        return {
+            **self.base.to_json(),
+            "message_reference": {
+                "message_id": _extract_int(self.message_reference),
+            }
+        }
+
+
 @dataclass(frozen=True)
 class State:
     http: RESTClient
-    cache: Callable[[int], Optional["Channel"]]
+    cache: Cache
 
 
-def channel_from_json(state: State, json: dict):
-    channel_type = _CHANNEL_TYPE_TO_CLASS[json["type"]]
-    return channel_type.from_json(state, json)
+class AutoArchiveDuration(IntEnum):
+    HOUR = 60
+    ONE_DAY = 1440
+    THREE_DAYS = 4320
+    SEVEN_DAYS = 10080
+
+
+class VideoQualityMode(IntEnum):
+    AUTO = 1
+    FULL = 2
 
 
 class OverwriteType(IntEnum):
@@ -60,25 +165,104 @@ class Channel(ABC, Snowflake):
     id: int
     _state: State
 
+    async def _delete(self, reason: Optional[str] = None):
+        await res.delete_channel(self._state.http, self.id, reason=reason)
+
     @classmethod
     @abstractmethod
     def from_json(cls: Type[_C], state: State, json: dict) -> _C:
         ...
 
 
+_MesssageRef = Union[Snowflake, int, None]
+
+
+class _Typing:
+    """
+    Async context manager for a typing indicator.
+    """
+    def __init__(self, refresh: Callable[[], Awaitable[None]]):
+        self.stopped = False
+        self.refresh = refresh
+        self._task = asyncio.create_task(self.sleep_forever())
+
+    async def sleep_forever(self):
+        while not self.stopped:
+            await self.refresh()
+            await asyncio.sleep(5)
+
+    def __enter__(self):
+        return self
+
+    def __exit__(self, exc_type, exc_value, exc_tb):
+        self.stopped = True
+
+    def __del__(self):
+        if not self.stopped:
+            warnings.warn("You should use `channel.typing()` in a context manager (the `with` statement)")
+            self.stopped = True
+
+
 class TextChannel(Channel):
-    # TODO: implement the Message object
-    async def send(self, yolo: dict) -> dict:
-        return await res.create_message(
+    @overload
+    async def messages(self, *, limit: int = ..., around: _MesssageRef) -> Sequence[Message]: ...
+    @overload
+    async def messages(self, *, limit: int = ..., before: _MesssageRef) -> Sequence[Message]: ...
+    @overload
+    async def messages(self, *, limit: int = ..., after: _MesssageRef) -> Sequence[Message]: ...
+    @overload
+    async def messages(self, *, limit: int = ...) -> Sequence[Message]: ...
+
+    async def messages(self, **kwargs) -> Sequence[Message]:
+        if len(kwargs.keys() & {"before", "after", "around"}) > 1:
+            raise TypeError("Can provide at most one of {around, before, after}")
+
+        kwargs = {k: _extract_int(v) for k, v in kwargs.items() if v is not None}
+
+        message_jsons = await res.get_channel_messages(
             self._state.http,
             channel_id=self.id,
-            **yolo
+            **kwargs
         )
+        return [Message.from_json(json) for json in message_jsons]
+
+    async def bulk_delete(self, messages: Iterable[Union[Snowflake, int]]) -> None:
+        await res.bulk_delete_messages(
+            self._state.http,
+            channel_id=self.id,
+            messages=[_extract_int(m) for m in messages]
+        )
+
+    def typing(self) -> ContextManager:
+        async def refresh_typing():
+            await res.trigger_typing_indicator(
+                self._state.http,
+                channel_id=self.id
+            )
+        return _Typing(refresh_typing)
+
+    async def pinned_messages(self):
+        message_jsons = await res.get_pinned_messages(
+            self._state.http,
+            channel_id=self.id,
+        )
+        return [Message.from_json(m) for m in message_jsons]
+
+    # TODO: implement form-data messages
+    async def send(self, message: BaseMessageContent) -> Message:
+        return Message.from_json(await res.create_message(
+            self._state.http,
+            channel_id=self.id,
+            **message.to_json(),
+        ))
 
 
 @dataclass(frozen=True)
 class DMChannel(TextChannel):
     recipient: User
+
+    async def close(self, *, reason: Optional[str] = None):
+        await self._delete(reason=reason)
 
     @classmethod
     def from_json(cls, state: State, json: dict) -> "DMChannel":
@@ -96,6 +280,37 @@ _GC = TypeVar("_GC", bound="GuildChannel")
 class GuildChannel(Channel):
     guild_id: int
     name: str
+
+    async def set_permission_overwrite(
+        self,
+        overwrite: PermissionOverwrite,
+        reason: Optional[str] = None
+    ) -> None:
+        overwrite_json = overwrite.to_json()
+        overwrite_json["overwrite_id"] = overwrite_json.pop("id")
+        await res.edit_channel_permissions(
+            self._state.http,
+            channel_id=self.id,
+            reason=reason,
+            **overwrite_json
+        )
+
+    async def delete_permission_overwrite(
+        self,
+        id: Union[Snowflake, int],
+        reason: Optional[str] = None
+    ) -> None:
+        await res.delete_channel_permission(
+            self._state.http,
+            channel_id=self.id,
+            overwrite_id=_extract_int(id),
+            reason=reason
+        )
+
+    # TODO: Invites
+
+    async def delete(self, *, reason: Optional[str] = None):
+        await self._delete(reason=reason)
 
     async def _edit(self, **kwargs: Any) -> dict:
         return await res.modify_guild_channel(
@@ -121,7 +336,7 @@ class GuildChannel(Channel):
 
 
 @dataclass(frozen=True)
-class HasPosition:
+class HasPosition(Channel):
     position: int
 
 
@@ -130,6 +345,32 @@ class GuildTextChannel(TextChannel, GuildChannel, HasPosition):
     category_id: Optional[int]
     topic: Optional[str]
     slowmode_seconds: int
+
+    async def start_public_thread(
+        self,
+        name: str,
+        auto_archive_duration: AutoArchiveDuration = AutoArchiveDuration.ONE_DAY,
+    ):
+        await res.start_thread_without_message(
+            self._state.http,
+            channel_id=self.id,
+            name=name,
+            type=11,
+            auto_archive_duration=auto_archive_duration
+        )
+
+    async def start_private_thread(
+        self,
+        name: str,
+        auto_archive_duration: AutoArchiveDuration = AutoArchiveDuration.ONE_DAY,
+    ):
+        await res.start_thread_without_message(
+            self._state.http,
+            channel_id=self.id,
+            name=name,
+            type=12,
+            auto_archive_duration=auto_archive_duration
+        )
 
     async def edit(
         self,
@@ -181,6 +422,19 @@ class NewsChannel(TextChannel, GuildChannel, HasPosition):
     category_id: Optional[int]
     topic: Optional[str]
 
+    async def start_thread(
+        self,
+        name: str,
+        auto_archive_duration: AutoArchiveDuration = AutoArchiveDuration.ONE_DAY,
+    ):
+        await res.start_thread_without_message(
+            self._state.http,
+            channel_id=self.id,
+            name=name,
+            type=10,
+            auto_archive_duration=auto_archive_duration
+        )
+
     async def edit(
         self,
         *,
@@ -221,11 +475,6 @@ class NewsChannel(TextChannel, GuildChannel, HasPosition):
             category_id=_nullmap(json.get("parent_id"), int),
             topic=json.get("toic"),
         )
-
-
-class VideoQualityMode(IntEnum):
-    AUTO = 1
-    FULL = 2
 
 
 @dataclass(frozen=True)
@@ -298,13 +547,6 @@ class Stage(VoiceChannel, HasPosition):
         )
 
 
-class AutoArchiveDuration(IntEnum):
-    HOUR = 60
-    ONE_DAY = 1440
-    THREE_DAYS = 4320
-    SEVEN_DAYS = 10080
-
-
 _TC = TypeVar("_TC", bound="Thread")
 
 
@@ -314,6 +556,51 @@ def _parse_thread_metadata(json: dict):
         "auto_archive_duration ": AutoArchiveDuration(json["auto_archive_duration"]),
         "archive_timestamp": datetime.fromisoformat(json["archive_timestamp"]),
     }
+
+
+@dataclass(frozen=True)
+class _ThreadMemberObj:
+    thread_id: int
+    user_id: int
+    join_timestamp: datetime
+    flags: int
+
+    @staticmethod
+    def from_json(json) -> "_ThreadMemberObj":
+        return _ThreadMemberObj(
+            thread_id=int(json["id"]),
+            user_id=int(json["user_id"]),
+            join_timestamp=datetime.fromisoformat(json["join_timestamp"]),
+            flags=int(json["flags"]),
+        )
+
+
+@dataclass(frozen=True)
+class ThreadMembers:
+    id: int
+    _state: State
+
+    async def add(self, member: Union[Snowflake, int]):
+        await res.add_thread_member(
+            self._state.http,
+            channel_id=self.id,
+            user_id=_extract_int(member)
+        )
+
+    async def remove(self, member: Union[Snowflake, int]):
+        await res.add_thread_member(
+            self._state.http,
+            channel_id=self.id,
+            user_id=_extract_int(member)
+        )
+
+    async def fetch(self) -> AsyncIterator[Member]:
+        for json in await res.list_thread_members(
+            self._state.http,
+            channel_id=self.id,
+        ):
+            member_obj = _ThreadMemberObj.from_json(json)
+            yield Member(member_obj.user_id)
 
 
 @dataclass(frozen=True)
@@ -327,6 +614,15 @@ class Thread(TextChannel, GuildChannel):
     auto_archive_duration: AutoArchiveDuration
     archive_timestamp: bool
     locked: bool
+
+    async def join(self):
+        await res.join_thread(self._state.http, channel_id=self.id)
+
+    async def leave(self):
+        await res.leave_thread(self._state.http, channel_id=self.id)
+
+    def members(self) -> ThreadMembers:
+        return ThreadMembers(self.id, self._state)
 
     async def edit(
         self: _TC,
