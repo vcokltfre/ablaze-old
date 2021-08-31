@@ -140,8 +140,6 @@ async def create_message(
         sticker_ids=sticker_ids,
     )
 
-    print("Create message", print(params))
-
     return await http.post(route, files=[file], json=params)
 
 
