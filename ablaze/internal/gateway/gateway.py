@@ -60,8 +60,7 @@ class GatewayClient:
             await limiter.wait()
             self._loop.create_task(shard.connect())
 
-        while True:
-            await sleep(0)
+        self._loop.run_forever()
 
     async def dispatch(self, shard: Shard, direction: str, event: dict) -> None:
         name = event.get("t") or f"OP_{event['op']}"
