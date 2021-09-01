@@ -315,6 +315,8 @@ class RESTClient:
                 self._limiter.clear_global(retry_after)
             else:
                 bucket.defer(retry_after)
+        else:
+            raise self._status_to_error_type[status](response)
 
         return _Response(response, successful=False)
 
