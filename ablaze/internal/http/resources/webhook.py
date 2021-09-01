@@ -1,3 +1,4 @@
+from json import loads
 from typing import Optional, Union
 
 from ...utils import _UNSET, UNSET
@@ -137,7 +138,13 @@ async def execute_webhook(
         components=components,
     )
 
-    return await http.post(route, files=[file], json=params, qparams=qparams)
+    # The `wait` flag specifies whether Discord should confirm the execution
+    # by returning a message object back.
+    result = await http.post(route, files=[file], json=params, qparams=qparams, format="text")
+    if result:
+        return loads(result)
+    else:
+        return None
 
 
 async def get_webhook_message(
