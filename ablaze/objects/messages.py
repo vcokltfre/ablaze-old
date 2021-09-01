@@ -31,8 +31,8 @@ class MessageContent(BaseMessageContent):
     file: Optional[File] = None
 
     def __post_init__(self):
-        if not (self.text or self.embeds or self.stickers or self.file):
-            raise ValueError("You must provide at least one of {text, stickers, embeds, file}")
+        if not (self.text or self.embeds or self.file):
+            raise ValueError("You must provide at least one of {text, embeds, file}")
 
     def render(self) -> RenderedMessageContent:
         json = {}
