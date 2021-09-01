@@ -1,4 +1,4 @@
-from ablaze.internal.http.file import File
+import ablaze.objects.messages as messages
 from ablaze.objects.utils import extract_int, nullmap
 import asyncio
 import warnings
@@ -31,17 +31,6 @@ def channel_from_json(state: "State", json: dict) -> "Channel":
 
 ### <Stubs>
 # These are stubs for classes that are not yet implemented.
-@dataclass(frozen=True)
-class Message(Snowflake):
-    id: int
-    text: Optional[str]
-
-    @staticmethod
-    def from_json(json: dict) -> "Message":
-        return Message(
-            id=int(json["id"]),
-            text=json.get("content")
-        )
 
 
 class Member(Snowflake):
@@ -57,68 +46,6 @@ class Cache(Protocol):
     def get_channel(self, id: int) -> Optional["Channel"]: ...
 
 ### </Stub>
-
-
-@dataclass(frozen=True)
-class _RenderedMessage:
-    json: Dict[str, Any]
-    file: Optional[File]
-
-
-class BaseMessageContent(ABC):
-    @abstractmethod
-    def render(self) -> _RenderedMessage: ...
-
-    def in_reply_to(self, to: Union[Snowflake, int]) -> "MessageContentWithReference":
-        return MessageContentWithReference(self, to)
-
-
-@dataclass(frozen=True)
-class MessageContent(BaseMessageContent):
-    text: Optional[str] = None
-    embeds: Optional[Sequence[Any]] = None  # TODO: embeds
-    allowed_mentions: Optional[Any] = None  # TODO: allowed mentions
-    components: Optional[Sequence[Any]] = None  # TODO: component
-    stickers: Optional[Sequence[Union[Snowflake, int]]] = None
-    tts: Optional[bool] = False
-    file: Optional[File] = None
-
-    def __post_init__(self):
-        if not (self.text or self.embeds or self.stickers or self.file):
-            raise ValueError("You must provide at least one of {text, stickers, embeds, file}")
-
-    def render(self) -> _RenderedMessage:
-        json = {}
-        if self.text:
-            json["content"] = self.text
-        if self.embeds:
-            json["embeds"] = [embed for embed in self.embeds]
-        if self.allowed_mentions:
-            json["allowed_mentions"] = self.allowed_mentions
-        if self.components:
-            json["components"] = [component for component in self.components]
-        if self.stickers:
-            json["sticker_ids"] = [extract_int(sticker) for sticker in self.stickers]
-        if self.tts is not None:
-            json["tts"] = self.tts
-
-        return _RenderedMessage(json=json, file=self.file)
-
-
-@dataclass(frozen=True)
-class MessageContentWithReference(BaseMessageContent):
-    base: BaseMessageContent
-    message_reference: Union[Snowflake, int]
-
-    def render(self) -> _RenderedMessage:
-        rendered_base = self.base.render()
-        json = {
-            **rendered_base.json,
-            "message_reference": {
-                "message_id": extract_int(self.message_reference),
-            }
-        }
-        return _RenderedMessage(json=json, file=rendered_base.file)
 
 
 @dataclass(frozen=True)
@@ -204,16 +131,18 @@ class _Typing:
 
 
 class TextChannel(Channel):
-    @overload
-    async def messages(self, *, limit: int = ..., around: _MesssageRef) -> Sequence[Message]: ...
-    @overload
-    async def messages(self, *, limit: int = ..., before: _MesssageRef) -> Sequence[Message]: ...
-    @overload
-    async def messages(self, *, limit: int = ..., after: _MesssageRef) -> Sequence[Message]: ...
-    @overload
-    async def messages(self, *, limit: int = ...) -> Sequence[Message]: ...
+    messages_module = messages  # we have to do this because we have a method called `messages`
 
-    async def messages(self, **kwargs) -> Sequence[Message]:
+    @overload
+    async def messages(self, *, limit: int = ..., around: _MesssageRef) -> Sequence[messages_module.Message]: ...
+    @overload
+    async def messages(self, *, limit: int = ..., before: _MesssageRef) -> Sequence[messages_module.Message]: ...
+    @overload
+    async def messages(self, *, limit: int = ..., after: _MesssageRef) -> Sequence[messages_module.Message]: ...
+    @overload
+    async def messages(self, *, limit: int = ...) -> Sequence[messages_module.Message]: ...
+
+    async def messages(self, **kwargs) -> Sequence[messages_module.Message]:
         if len(kwargs.keys() & {"before", "after", "around"}) > 1:
             raise TypeError("Can provide at most one of {around, before, after}")
 
@@ -224,7 +153,7 @@ class TextChannel(Channel):
             channel_id=self.id,
             **kwargs
         )
-        return [Message.from_json(json) for json in message_jsons]
+        return [messages.Message.from_json(json) for json in message_jsons]
 
     async def bulk_delete(self, messages: Iterable[Union[Snowflake, int]]) -> None:
         await res.bulk_delete_messages(
@@ -246,11 +175,11 @@ class TextChannel(Channel):
             self._state.http,
             channel_id=self.id,
         )
-        return [Message.from_json(m) for m in message_jsons]
+        return [messages.Message.from_json(m) for m in message_jsons]
 
-    async def send(self, message: BaseMessageContent) -> Message:
-        rendered = message.render()
-        return Message.from_json(await res.create_message(
+    async def send(self, content: messages_module.BaseMessageContent) -> messages_module.Message:
+        rendered = content.render()
+        return messages.Message.from_json(await res.create_message(
             self._state.http,
             channel_id=self.id,
             file=rendered.file or UNSET,
