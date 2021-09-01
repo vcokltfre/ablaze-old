@@ -154,7 +154,6 @@ class Shard:
             self._recieved_ack = True
         elif op == GatewayOps.RECONNECT:
             await self.close()
-            await self.connect()
 
     async def handle_disconnect(self, code: int) -> None:
         """Handle the gateway disconnecting correctly."""
@@ -181,7 +180,6 @@ class Shard:
         self._seq = None
 
         await self.close()
-        await self.connect()
 
     async def start_reader(self) -> None:
         """Start a loop constantly reading from the gateway."""
