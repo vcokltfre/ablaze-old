@@ -1,3 +1,5 @@
+from ablaze.internal.http.file import File
+from ablaze.objects.utils import extract_int, nullmap
 import asyncio
 import warnings
 from ablaze.objects.permissions import PermissionFlags
@@ -20,18 +22,6 @@ _T = TypeVar("_T")
 _R = TypeVar("_R")
 _C = TypeVar("_C", bound="Channel")
 U = Union[_UNSET, _T]
-
-
-def _nullmap(optional: Optional[_T], fn: Callable[[_T], _R]) -> Optional[_R]:
-    if optional is None:
-        return None
-    return fn(optional)
-
-
-def _extract_int(obj: Union[Snowflake, int]) -> int:
-    if isinstance(obj, int):
-        return obj
-    return obj.id
 
 
 def channel_from_json(state: "State", json: dict) -> "Channel":
@@ -69,9 +59,15 @@ class Cache(Protocol):
 ### </Stub>
 
 
+@dataclass(frozen=True)
+class _RenderedMessage:
+    json: Dict[str, Any]
+    file: Optional[File]
+
+
 class BaseMessageContent(ABC):
     @abstractmethod
-    def to_json(self) -> dict: ...
+    def render(self) -> _RenderedMessage: ...
 
     def in_reply_to(self, to: Union[Snowflake, int]) -> "MessageContentWithReference":
         return MessageContentWithReference(self, to)
@@ -85,12 +81,13 @@ class MessageContent(BaseMessageContent):
     components: Optional[Sequence[Any]] = None  # TODO: component
     stickers: Optional[Sequence[Union[Snowflake, int]]] = None
     tts: Optional[bool] = False
+    file: Optional[File] = None
 
     def __post_init__(self):
-        if not (self.text or self.embeds or self.stickers):
-            raise ValueError("You must provideYou'll  at least one of {text, stickers, embeds}")
+        if not (self.text or self.embeds or self.stickers or self.file):
+            raise ValueError("You must provide at least one of {text, stickers, embeds, file}")
 
-    def to_json(self) -> dict:
+    def render(self) -> _RenderedMessage:
         json = {}
         if self.text:
             json["content"] = self.text
@@ -101,10 +98,11 @@ class MessageContent(BaseMessageContent):
         if self.components:
             json["components"] = [component for component in self.components]
         if self.stickers:
-            json["sticker_ids"] = [_extract_int(sticker) for sticker in self.stickers]
+            json["sticker_ids"] = [extract_int(sticker) for sticker in self.stickers]
         if self.tts is not None:
             json["tts"] = self.tts
-        return json
+
+        return _RenderedMessage(json=json, file=self.file)
 
 
 @dataclass(frozen=True)
@@ -112,13 +110,15 @@ class MessageContentWithReference(BaseMessageContent):
     base: BaseMessageContent
     message_reference: Union[Snowflake, int]
 
-    def to_json(self) -> dict:
-        return {
-            **self.base.to_json(),
+    def render(self) -> _RenderedMessage:
+        rendered_base = self.base.render()
+        json = {
+            **rendered_base.json,
             "message_reference": {
-                "message_id": _extract_int(self.message_reference),
+                "message_id": extract_int(self.message_reference),
             }
         }
+        return _RenderedMessage(json=json, file=rendered_base.file)
 
 
 @dataclass(frozen=True)
@@ -217,7 +217,7 @@ class TextChannel(Channel):
         if len(kwargs.keys() & {"before", "after", "around"}) > 1:
             raise TypeError("Can provide at most one of {around, before, after}")
 
-        kwargs = {k: _extract_int(v) for k, v in kwargs.items() if v is not None}
+        kwargs = {k: extract_int(v) for k, v in kwargs.items() if v is not None}
 
         message_jsons = await res.get_channel_messages(
             self._state.http,
@@ -230,7 +230,7 @@ class TextChannel(Channel):
         await res.bulk_delete_messages(
             self._state.http,
             channel_id=self.id,
-            messages=[_extract_int(m) for m in messages]
+            messages=[extract_int(m) for m in messages]
         )
 
     def typing(self) -> ContextManager:
@@ -248,12 +248,13 @@ class TextChannel(Channel):
         )
         return [Message.from_json(m) for m in message_jsons]
 
-    # TODO: implement form-data messages
     async def send(self, message: BaseMessageContent) -> Message:
+        rendered = message.render()
         return Message.from_json(await res.create_message(
             self._state.http,
             channel_id=self.id,
-            **message.to_json(),
+            file=rendered.file or UNSET,
+            **rendered.json,
         ))
 
 
@@ -303,7 +304,7 @@ class GuildChannel(Channel):
         await res.delete_channel_permission(
             self._state.http,
             channel_id=self.id,
-            overwrite_id=_extract_int(id),
+            overwrite_id=extract_int(id),
             reason=reason
         )
 
@@ -411,7 +412,7 @@ class GuildTextChannel(TextChannel, GuildChannel, HasPosition):
             position=int(json["position"]),
             name=json["name"],
             guild_id=int(json["guild_id"]),
-            category_id=_nullmap(json.get("parent_id"), int),
+            category_id=nullmap(json.get("parent_id"), int),
             topic=json.get("topic"),
             slowmode_seconds=int(json["rate_limit_per_user"])
         )
@@ -472,7 +473,7 @@ class NewsChannel(TextChannel, GuildChannel, HasPosition):
             position=json["position"],
             name=json["name"],
             guild_id=int(json["guild_id"]),
-            category_id=_nullmap(json.get("parent_id"), int),
+            category_id=nullmap(json.get("parent_id"), int),
             topic=json.get("toic"),
         )
 
@@ -584,14 +585,14 @@ class ThreadMembers:
         await res.add_thread_member(
             self._state.http,
             channel_id=self.id,
-            user_id=_extract_int(member)
+            user_id=extract_int(member)
         )
 
     async def remove(self, member: Union[Snowflake, int]):
         await res.add_thread_member(
             self._state.http,
             channel_id=self.id,
-            user_id=_extract_int(member)
+            user_id=extract_int(member)
         )
 
     async def fetch(self) -> AsyncIterator[Member]:
@@ -655,7 +656,7 @@ class Thread(TextChannel, GuildChannel):
             name=json["name"],
             slowmode_seconds=json["rate_limit_per_user"],
             owner_id=int(json["owner_id"]),
-            joined_at=_nullmap(
+            joined_at=nullmap(
                 json.get("member"),
                 lambda member_obj: datetime.fromisoformat(member_obj["join_timestamp"])
             ),
