@@ -25,6 +25,10 @@ U = Union[_UNSET, _T]
 
 
 def channel_from_json(state: "State", json: dict) -> "Channel":
+    """
+    Create a channel of the correct concrete class using a JSON
+    response from Discord.
+    """
     channel_type = _CHANNEL_TYPE_TO_CLASS[json["type"]]
     return channel_type.from_json(state, json)
 
@@ -50,11 +54,22 @@ class Cache(Protocol):
 
 @dataclass(frozen=True)
 class State:
+    """
+    State is required by Channel objects because they act in a
+    sort of 'active record' way: they allow communicating
+    over the network but don't rely on global state.
+    """
     http: RESTClient
     cache: Cache
 
 
 class AutoArchiveDuration(IntEnum):
+    """
+    The fixed values allowed by Discord to specify the archive duraiton.
+
+    Archive duration is how much time must pass since the last message of
+    a thread until it becomes archived.
+    """
     HOUR = 60
     ONE_DAY = 1440
     THREE_DAYS = 4320
@@ -73,6 +88,11 @@ class OverwriteType(IntEnum):
 
 @dataclass(frozen=True)
 class PermissionOverwrite:
+    """
+    Data structure used to customize permissions for a single member or a role.
+
+    Reference: https://discord.com/developers/docs/topics/permissions#permission-overwrites
+    """
     id: int
     type: OverwriteType
     allow: PermissionFlags
@@ -89,6 +109,14 @@ class PermissionOverwrite:
 
 @dataclass(frozen=True)
 class Channel(ABC, Snowflake):
+    """
+    A channel is a node in the tree structure of a guild. This includes ordinary
+    text channels, threads, voice channels, and categories.
+
+    Reference: https://discord.com/developers/docs/resources/channel#channel-object
+
+    This class is abstract -- you can't instantiate it.
+    """
     id: int
     _state: State
 
@@ -106,7 +134,7 @@ _MesssageRef = Union[Snowflake, int, None]
 
 class _Typing:
     """
-    Async context manager for a typing indicator.
+    Context manager for a typing indicator.
     """
     def __init__(self, refresh: Callable[[], Awaitable[None]]):
         self.stopped = False
@@ -116,6 +144,8 @@ class _Typing:
     async def sleep_forever(self):
         while not self.stopped:
             await self.refresh()
+            # the typing indicator persists for 10 seconds, but if we refresh it
+            # every 10 seconds theere's going to be a gap in the animation
             await asyncio.sleep(5)
 
     def __enter__(self):
@@ -131,6 +161,11 @@ class _Typing:
 
 
 class TextChannel(Channel):
+    """
+    A channel you can send a message into.
+
+    This class is abstract -- you can't instantiate it.
+    """
     messages_module = messages  # we have to do this because we have a method called `messages`
 
     @overload
@@ -156,6 +191,11 @@ class TextChannel(Channel):
         return [messages.Message.from_json(json) for json in message_jsons]
 
     async def bulk_delete(self, messages: Iterable[Union[Snowflake, int]]) -> None:
+        """
+        Delete many messages at once.
+
+        Reference: <https://discord.com/developers/docs/resources/channel#bulk-delete-messages>
+        """
         await res.bulk_delete_messages(
             self._state.http,
             channel_id=self.id,
@@ -163,6 +203,13 @@ class TextChannel(Channel):
         )
 
     def typing(self) -> ContextManager:
+        """
+        Acquire a context manager that keeps the typing indicator ("<Bot> is typing...")
+        as long as its body is running.
+
+        >>> with channel.typing():
+        ...     # do some long-running computation
+        """
         async def refresh_typing():
             await res.trigger_typing_indicator(
                 self._state.http,
@@ -170,7 +217,14 @@ class TextChannel(Channel):
             )
         return _Typing(refresh_typing)
 
-    async def pinned_messages(self):
+    async def pinned_messages(self) -> Sequence[messages_module.Message]:
+        """
+        Fetch all messages that are pinned in this channel.
+
+        This returns a sequence and not an asynchronous iterator because the API
+        doesn't provide any pagination, as there can only be 100 pinned messages
+        in a single channel.
+        """
         message_jsons = await res.get_pinned_messages(
             self._state.http,
             channel_id=self.id,
@@ -189,6 +243,9 @@ class TextChannel(Channel):
 
 @dataclass(frozen=True)
 class DMChannel(TextChannel):
+    """
+    Pseudo-channel representing the direct message communication with a user.
+    """
     recipient: User
 
     async def close(self, *, reason: Optional[str] = None):
@@ -208,6 +265,11 @@ _GC = TypeVar("_GC", bound="GuildChannel")
 
 @dataclass(frozen=True)
 class GuildChannel(Channel):
+    """
+    Channel that is in a guild.
+
+    This class is abstract -- you can't instantiate it.
+    """
     guild_id: int
     name: str
 
@@ -267,11 +329,17 @@ class GuildChannel(Channel):
 
 @dataclass(frozen=True)
 class HasPosition(Channel):
+    """
+    Mixin signalling that a channel has a position in some ordered list
+    """
     position: int
 
 
 @dataclass(frozen=True)
 class GuildTextChannel(TextChannel, GuildChannel, HasPosition):
+    """
+    Ordinary text channel in a guild, denoted in Discord as #<name>.
+    """
     category_id: Optional[int]
     topic: Optional[str]
     slowmode_seconds: int
@@ -349,6 +417,18 @@ class GuildTextChannel(TextChannel, GuildChannel, HasPosition):
 
 @dataclass(frozen=True)
 class NewsChannel(TextChannel, GuildChannel, HasPosition):
+    """
+    Called "announcement channels" on the platform.
+
+    This type of channel supports subscriptions. They work like this:
+    - A usser can make a channel on their server follow a news channel. ``
+    - Following is implemented via a webhook, which is represented with
+      `ChannelFollowerWebhook` in this library.
+    - A user who is allowed to send a message in the news channel can publish it.
+      In that case, this message is executed on all follower webhooks.
+    """
+    # TODO: following
+
     category_id: Optional[int]
     topic: Optional[str]
 
@@ -409,6 +489,9 @@ class NewsChannel(TextChannel, GuildChannel, HasPosition):
 
 @dataclass(frozen=True)
 class VoiceChannel(GuildChannel):
+    """
+    Either a 'normal' voice channel or a stage channel.
+    """
     bitrate: int
     user_limit: int
     rtc_region: Optional[str]
@@ -416,6 +499,9 @@ class VoiceChannel(GuildChannel):
 
 @dataclass(frozen=True)
 class NormalVoiceChannel(VoiceChannel, HasPosition):
+    """
+    Channel where users can communicate via voice and/or video.
+    """
     video_quality_mode: Optional[VideoQualityMode]
 
     async def edit(
@@ -460,6 +546,9 @@ class NormalVoiceChannel(VoiceChannel, HasPosition):
 
 @dataclass(frozen=True)
 class Stage(VoiceChannel, HasPosition):
+    """
+    Stage channel for one-to-many communication.
+    """
     topic: Optional[str]
 
     @classmethod
@@ -490,6 +579,9 @@ def _parse_thread_metadata(json: dict):
 
 @dataclass(frozen=True)
 class _ThreadMemberObj:
+    """
+    Reference: <https://discord.com/developers/docs/resources/channel#thread-member-object>
+    """
     thread_id: int
     user_id: int
     join_timestamp: datetime
@@ -507,6 +599,9 @@ class _ThreadMemberObj:
 
 @dataclass(frozen=True)
 class ThreadMembers:
+    """
+    Helper object for working with thread members
+    """
     id: int
     _state: State
 
@@ -535,6 +630,9 @@ class ThreadMembers:
 
 @dataclass(frozen=True)
 class Thread(TextChannel, GuildChannel):
+    """
+    Temporary sub-channel inside a text channel.
+    """
     parent_channel_id: int
     slowmode_seconds: int
     owner_id: int
@@ -594,20 +692,34 @@ class Thread(TextChannel, GuildChannel):
 
 
 class PublicThread(Thread):
-    pass
+    """
+    Public thread created on a guild text channel
+    """
 
 
 @dataclass(frozen=True)
 class PrivateThread(Thread):
+    """
+    Private thread created on a guild text channel
+    """
     invitable: bool
 
 
 class NewsChannelThread(Thread):
-    pass
+    """
+    Public thread created on a news channel
+    """
 
 
 @dataclass(frozen=True)
 class Category(GuildChannel, HasPosition):
+    """
+    Pseudo-channel representing a category on the platform.
+
+    A category is a root for text channels, voice channels, stage
+    channels and news chanenls.
+    """
+
     @classmethod
     def from_json(cls, state: State, json: dict) -> "Category":
         return Category(
@@ -621,6 +733,9 @@ class Category(GuildChannel, HasPosition):
 
 @dataclass(frozen=True)
 class StoreChannel(GuildChannel, HasPosition):
+    # Store channels are out of scope for now because they're not
+    # easily available for testing
+
     async def edit(
         self, *,
         name: U[str] = UNSET,
