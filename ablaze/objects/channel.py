@@ -52,7 +52,7 @@ class Cache(Protocol):
 ### </Stub>
 
 
-@dataclass(frozen=True)
+@dataclass
 class State:
     """
     State is required by Channel objects because they act in a
@@ -86,7 +86,7 @@ class OverwriteType(IntEnum):
     MEMBER = 1
 
 
-@dataclass(frozen=True)
+@dataclass
 class PermissionOverwrite:
     """
     Data structure used to customize permissions for a single member or a role.
@@ -107,7 +107,7 @@ class PermissionOverwrite:
         }
 
 
-@dataclass(frozen=True)
+@dataclass
 class Channel(ABC, Snowflake):
     """
     A channel is a node in the tree structure of a guild. This includes ordinary
@@ -241,7 +241,7 @@ class TextChannel(Channel):
         ))
 
 
-@dataclass(frozen=True)
+@dataclass
 class DMChannel(TextChannel):
     """
     Pseudo-channel representing the direct message communication with a user.
@@ -263,7 +263,7 @@ class DMChannel(TextChannel):
 _GC = TypeVar("_GC", bound="GuildChannel")
 
 
-@dataclass(frozen=True)
+@dataclass
 class GuildChannel(Channel):
     """
     Channel that is in a guild.
@@ -327,7 +327,7 @@ class GuildChannel(Channel):
         ))
 
 
-@dataclass(frozen=True)
+@dataclass
 class HasPosition(Channel):
     """
     Mixin signalling that a channel has a position in some ordered list
@@ -335,7 +335,7 @@ class HasPosition(Channel):
     position: int
 
 
-@dataclass(frozen=True)
+@dataclass
 class GuildTextChannel(TextChannel, GuildChannel, HasPosition):
     """
     Ordinary text channel in a guild, denoted in Discord as #<name>.
@@ -415,7 +415,7 @@ class GuildTextChannel(TextChannel, GuildChannel, HasPosition):
         )
 
 
-@dataclass(frozen=True)
+@dataclass
 class NewsChannel(TextChannel, GuildChannel, HasPosition):
     """
     Called "announcement channels" on the platform.
@@ -487,7 +487,7 @@ class NewsChannel(TextChannel, GuildChannel, HasPosition):
         )
 
 
-@dataclass(frozen=True)
+@dataclass
 class VoiceChannel(GuildChannel):
     """
     Either a 'normal' voice channel or a stage channel.
@@ -497,7 +497,7 @@ class VoiceChannel(GuildChannel):
     rtc_region: Optional[str]
 
 
-@dataclass(frozen=True)
+@dataclass
 class NormalVoiceChannel(VoiceChannel, HasPosition):
     """
     Channel where users can communicate via voice and/or video.
@@ -544,7 +544,7 @@ class NormalVoiceChannel(VoiceChannel, HasPosition):
         )
 
 
-@dataclass(frozen=True)
+@dataclass
 class Stage(VoiceChannel, HasPosition):
     """
     Stage channel for one-to-many communication.
@@ -577,7 +577,7 @@ def _parse_thread_metadata(json: dict):
     }
 
 
-@dataclass(frozen=True)
+@dataclass
 class _ThreadMemberObj:
     """
     Reference: <https://discord.com/developers/docs/resources/channel#thread-member-object>
@@ -597,7 +597,7 @@ class _ThreadMemberObj:
         )
 
 
-@dataclass(frozen=True)
+@dataclass
 class ThreadMembers:
     """
     Helper object for working with thread members
@@ -628,7 +628,7 @@ class ThreadMembers:
             yield Member(member_obj.user_id)
 
 
-@dataclass(frozen=True)
+@dataclass
 class Thread(TextChannel, GuildChannel):
     """
     Temporary sub-channel inside a text channel.
@@ -697,7 +697,7 @@ class PublicThread(Thread):
     """
 
 
-@dataclass(frozen=True)
+@dataclass
 class PrivateThread(Thread):
     """
     Private thread created on a guild text channel
@@ -711,7 +711,7 @@ class NewsChannelThread(Thread):
     """
 
 
-@dataclass(frozen=True)
+@dataclass
 class Category(GuildChannel, HasPosition):
     """
     Pseudo-channel representing a category on the platform.
@@ -731,7 +731,7 @@ class Category(GuildChannel, HasPosition):
         )
 
 
-@dataclass(frozen=True)
+@dataclass
 class StoreChannel(GuildChannel, HasPosition):
     # Store channels are out of scope for now because they're not
     # easily available for testing

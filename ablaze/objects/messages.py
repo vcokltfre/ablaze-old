@@ -6,7 +6,7 @@ from typing import Any, Dict, Optional, Sequence, Union
 from ablaze.objects.abc import Snowflake
 
 
-@dataclass(frozen=True)
+@dataclass
 class RenderedMessageContent:
     json: Dict[str, Any]
     file: Optional[File]
@@ -20,7 +20,7 @@ class BaseMessageContent(ABC):
         return MessageContentWithReference(self, to)
 
 
-@dataclass(frozen=True)
+@dataclass
 class MessageContent(BaseMessageContent):
     text: Optional[str] = None
     embeds: Optional[Sequence[Any]] = None  # TODO: embeds
@@ -52,7 +52,7 @@ class MessageContent(BaseMessageContent):
         return RenderedMessageContent(json=json, file=self.file)
 
 
-@dataclass(frozen=True)
+@dataclass
 class MessageContentWithReference(BaseMessageContent):
     base: BaseMessageContent
     message_reference: Union[Snowflake, int]
@@ -68,7 +68,7 @@ class MessageContentWithReference(BaseMessageContent):
         return RenderedMessageContent(json=json, file=rendered_base.file)
 
 
-@dataclass(frozen=True)
+@dataclass
 class Message(Snowflake):
     id: int
     text: Optional[str]

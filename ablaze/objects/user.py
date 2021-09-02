@@ -6,7 +6,7 @@ from .assets import UserAvatar, DefaultUserAvatar, UserBanner
 from .flags import PublicUserFlags
 
 
-@dataclass(frozen=True)
+@dataclass
 class User(Snowflake):
     id: int
     username: str

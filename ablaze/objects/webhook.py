@@ -17,7 +17,7 @@ def webhook_from_json(client: RESTClient, json: dict) -> "Webhook":
 _W = TypeVar("_W", bound="Webhook")
 
 
-@dataclass(frozen=True)
+@dataclass
 class Webhook(Snowflake):
     id: int
     _http: RESTClient
@@ -57,7 +57,7 @@ class Webhook(Snowflake):
         )
 
 
-@dataclass(frozen=True)
+@dataclass
 class SourceChannel(Snowflake):
     id: int
     name: str
@@ -67,7 +67,7 @@ class SourceChannel(Snowflake):
         return SourceChannel(id=int(json["int"]), name=json["name"])
 
 
-@dataclass(frozen=True)
+@dataclass
 class SourceGuild(Snowflake):
     id: int
     name: str
@@ -78,7 +78,7 @@ class SourceGuild(Snowflake):
         return SourceGuild(id=int(json["int"]), name=json["name"], icon_hash=json["icon"])
 
 
-@dataclass(frozen=True)
+@dataclass
 class IncomingWebhook(Webhook):
     """
     'Normal' webhook created in the 'manage channel' screen.
@@ -137,7 +137,7 @@ class IncomingWebhook(Webhook):
         )
 
 
-@dataclass(frozen=True)
+@dataclass
 class ChannelFollowerWebhook(Webhook):
     """Internal webhook that Discord uses to implement following a news channel"""
     channel_id: int
@@ -154,7 +154,7 @@ class ChannelFollowerWebhook(Webhook):
         )
 
 
-@dataclass(frozen=True)
+@dataclass
 class ApplicationWebhook(Webhook):
     """Application webhooks are webhooks used with Interactions."""
     application_id: int  # should always be non-None
