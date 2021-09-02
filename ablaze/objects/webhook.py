@@ -96,6 +96,10 @@ class IncomingWebhook(Webhook):
         :return: Message object representing the sent message
         """
         rendered = content.render()
+
+        if "sticker_ids" in rendered.json:
+            raise ValueError("Cannot send stickers over a webhook")
+
         message_json = await res.execute_webhook(
             self._http,
             webhook_id=self.id,
@@ -119,6 +123,10 @@ class IncomingWebhook(Webhook):
         :return: None
         """
         rendered = content.render()
+
+        if "sticker_ids" in rendered.json:
+            raise ValueError("Cannot send stickers over a webhook")
+
         await res.execute_webhook(
             self._http,
             webhook_id=self.id,
