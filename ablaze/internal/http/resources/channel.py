@@ -476,13 +476,13 @@ async def remove_thread_member(http: RESTClient, channel_id: int, user_id: int) 
     await http.delete(route, format="none")
 
 
-async def list_thread_members(http: RESTClient, channel_id: int) -> None:
+async def list_thread_members(http: RESTClient, channel_id: int) -> list:
     route = Route("/channels/{channel_id}/thread-members", channel_id=channel_id)
 
     return await http.get(route)
 
 
-async def list_active_threads(http: RESTClient, channel_id: int) -> None:
+async def list_active_threads(http: RESTClient, channel_id: int) -> list:
     warn(
         "list_active_threads() is a deprecated method and will be removed with the release of the v10 API."
     )
@@ -496,7 +496,7 @@ async def list_public_archived_threads(
     channel_id: Union[int, _UNSET] = UNSET,
     before: Union[str, _UNSET] = UNSET,
     limit: Union[int, _UNSET] = UNSET,
-) -> None:
+) -> list:
     route = Route(
         "/channels/{channel_id}/threads/archived/public", channel_id=channel_id
     )
@@ -513,7 +513,7 @@ async def list_private_archived_threads(
     channel_id: Union[int, _UNSET] = UNSET,
     before: Union[str, _UNSET] = UNSET,
     limit: Union[int, _UNSET] = UNSET,
-) -> None:
+) -> list:
     route = Route(
         "/channels/{channel_id}/threads/archived/private", channel_id=channel_id
     )
@@ -530,7 +530,7 @@ async def list_joined_private_archived_threads(
     channel_id: Union[int, _UNSET] = UNSET,
     before: Union[str, _UNSET] = UNSET,
     limit: Union[int, _UNSET] = UNSET,
-) -> None:
+) -> list:
     route = Route(
         "/channels/{channel_id}/users/@me/threads/archived/private",
         channel_id=channel_id,
