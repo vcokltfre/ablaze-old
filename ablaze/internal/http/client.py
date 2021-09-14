@@ -1,5 +1,6 @@
 from asyncio import sleep
 from collections import defaultdict
+from json import dumps
 from logging import getLogger
 from typing import (
     Any,
@@ -247,6 +248,9 @@ class RESTClient:
                     data.add_field(
                         f"file_{file.filename}", file.file, filename=file.filename
                     )
+
+                if json is not UNSET:
+                    data.add_field("payload_json", dumps(json))
 
                 params["data"] = data
             elif json is not UNSET:
