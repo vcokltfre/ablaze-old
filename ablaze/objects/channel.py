@@ -1,22 +1,35 @@
-import ablaze.objects.messages as messages
-from ablaze.objects.utils import extract_int, nullmap
 import asyncio
 import warnings
-from ablaze.objects.permissions import PermissionFlags
+from abc import ABC, abstractmethod
+from dataclasses import dataclass
 from datetime import datetime
-from ablaze.objects.user import User
 from enum import IntEnum
 from typing import (
-    Any, AsyncIterator, Awaitable, Callable, ContextManager, Dict,
-    Iterable, Optional, Protocol, Sequence, Type, TypeVar, Union, overload
+    Any,
+    AsyncIterator,
+    Awaitable,
+    Callable,
+    ContextManager,
+    Dict,
+    Iterable,
+    Optional,
+    Protocol,
+    Sequence,
+    Type,
+    TypeVar,
+    Union,
+    overload,
 )
-from ablaze.internal.utils import _UNSET, UNSET
-from ablaze.internal.http.resources import channel as res
-from ablaze.internal.http.client import RESTClient
-from dataclasses import dataclass
-from abc import ABC,  abstractmethod
-from .abc import Snowflake
 
+import ablaze.objects.messages as messages
+from ablaze.internal.http.client import RESTClient
+from ablaze.internal.http.resources import channel as res
+from ablaze.internal.utils import _UNSET, UNSET
+from ablaze.objects.permissions import PermissionFlags
+from ablaze.objects.user import User
+from ablaze.objects.utils import extract_int, nullmap
+
+from .abc import Snowflake
 
 _T = TypeVar("_T")
 _R = TypeVar("_R")
@@ -46,8 +59,12 @@ class Guild(Snowflake):
 
 
 class Cache(Protocol):
-    def get_guild(self, id: int) -> Optional[Guild]: ...
-    def get_channel(self, id: int) -> Optional["Channel"]: ...
+    def get_guild(self, id: int) -> Optional[Guild]:
+        ...
+
+    def get_channel(self, id: int) -> Optional["Channel"]:
+        ...
+
 
 ### </Stub>
 
@@ -59,6 +76,7 @@ class State:
     sort of 'active record' way: they allow communicating
     over the network but don't rely on global state.
     """
+
     http: RESTClient
     cache: Cache
 
@@ -70,6 +88,7 @@ class AutoArchiveDuration(IntEnum):
     Archive duration is how much time must pass since the last message of
     a thread until it becomes archived.
     """
+
     HOUR = 60
     ONE_DAY = 1440
     THREE_DAYS = 4320
@@ -93,6 +112,7 @@ class PermissionOverwrite:
 
     Reference: https://discord.com/developers/docs/topics/permissions#permission-overwrites
     """
+
     id: int
     type: OverwriteType
     allow: PermissionFlags
@@ -117,6 +137,7 @@ class Channel(ABC, Snowflake):
 
     This class is abstract -- you can't instantiate it.
     """
+
     id: int
     _state: State
 
@@ -136,6 +157,7 @@ class _Typing:
     """
     Context manager for a typing indicator.
     """
+
     def __init__(self, refresh: Callable[[], Awaitable[None]]):
         self.stopped = False
         self.refresh = refresh
@@ -156,7 +178,9 @@ class _Typing:
 
     def __del__(self):
         if not self.stopped:
-            warnings.warn("You should use `channel.typing()` in a context manager (the `with` statement)")
+            warnings.warn(
+                "You should use `channel.typing()` in a context manager (the `with` statement)"
+            )
             self.stopped = True
 
 
@@ -166,16 +190,32 @@ class TextChannel(Channel):
 
     This class is abstract -- you can't instantiate it.
     """
-    messages_module = messages  # we have to do this because we have a method called `messages`
+
+    messages_module = (
+        messages  # we have to do this because we have a method called `messages`
+    )
 
     @overload
-    async def messages(self, *, limit: int = ..., around: _MesssageRef) -> Sequence[messages_module.Message]: ...
+    async def messages(
+        self, *, limit: int = ..., around: _MesssageRef
+    ) -> Sequence[messages_module.Message]:
+        ...
+
     @overload
-    async def messages(self, *, limit: int = ..., before: _MesssageRef) -> Sequence[messages_module.Message]: ...
+    async def messages(
+        self, *, limit: int = ..., before: _MesssageRef
+    ) -> Sequence[messages_module.Message]:
+        ...
+
     @overload
-    async def messages(self, *, limit: int = ..., after: _MesssageRef) -> Sequence[messages_module.Message]: ...
+    async def messages(
+        self, *, limit: int = ..., after: _MesssageRef
+    ) -> Sequence[messages_module.Message]:
+        ...
+
     @overload
-    async def messages(self, *, limit: int = ...) -> Sequence[messages_module.Message]: ...
+    async def messages(self, *, limit: int = ...) -> Sequence[messages_module.Message]:
+        ...
 
     async def messages(self, **kwargs) -> Sequence[messages_module.Message]:
         if len(kwargs.keys() & {"before", "after", "around"}) > 1:
@@ -184,9 +224,7 @@ class TextChannel(Channel):
         kwargs = {k: extract_int(v) for k, v in kwargs.items() if v is not None}
 
         message_jsons = await res.get_channel_messages(
-            self._state.http,
-            channel_id=self.id,
-            **kwargs
+            self._state.http, channel_id=self.id, **kwargs
         )
         return [messages.Message.from_json(json) for json in message_jsons]
 
@@ -199,7 +237,7 @@ class TextChannel(Channel):
         await res.bulk_delete_messages(
             self._state.http,
             channel_id=self.id,
-            messages=[extract_int(m) for m in messages]
+            messages=[extract_int(m) for m in messages],
         )
 
     def typing(self) -> ContextManager:
@@ -210,11 +248,10 @@ class TextChannel(Channel):
         >>> with channel.typing():
         ...     # do some long-running computation
         """
+
         async def refresh_typing():
-            await res.trigger_typing_indicator(
-                self._state.http,
-                channel_id=self.id
-            )
+            await res.trigger_typing_indicator(self._state.http, channel_id=self.id)
+
         return _Typing(refresh_typing)
 
     async def pinned_messages(self) -> Sequence[messages_module.Message]:
@@ -231,14 +268,18 @@ class TextChannel(Channel):
         )
         return [messages.Message.from_json(m) for m in message_jsons]
 
-    async def send(self, content: messages_module.BaseMessageContent) -> messages_module.Message:
+    async def send(
+        self, content: messages_module.BaseMessageContent
+    ) -> messages_module.Message:
         rendered = content.render()
-        return messages.Message.from_json(await res.create_message(
-            self._state.http,
-            channel_id=self.id,
-            file=rendered.file or UNSET,
-            **rendered.json,
-        ))
+        return messages.Message.from_json(
+            await res.create_message(
+                self._state.http,
+                channel_id=self.id,
+                file=rendered.file or UNSET,
+                **rendered.json,
+            )
+        )
 
 
 @dataclass
@@ -246,6 +287,7 @@ class DMChannel(TextChannel):
     """
     Pseudo-channel representing the direct message communication with a user.
     """
+
     recipient: User
 
     async def close(self, *, reason: Optional[str] = None):
@@ -270,33 +312,27 @@ class GuildChannel(Channel):
 
     This class is abstract -- you can't instantiate it.
     """
+
     guild_id: int
     name: str
 
     async def set_permission_overwrite(
-        self,
-        overwrite: PermissionOverwrite,
-        reason: Optional[str] = None
+        self, overwrite: PermissionOverwrite, reason: Optional[str] = None
     ) -> None:
         overwrite_json = overwrite.to_json()
         overwrite_json["overwrite_id"] = overwrite_json.pop("id")
         await res.edit_channel_permissions(
-            self._state.http,
-            channel_id=self.id,
-            reason=reason,
-            **overwrite_json
+            self._state.http, channel_id=self.id, reason=reason, **overwrite_json
         )
 
     async def delete_permission_overwrite(
-        self,
-        id: Union[Snowflake, int],
-        reason: Optional[str] = None
+        self, id: Union[Snowflake, int], reason: Optional[str] = None
     ) -> None:
         await res.delete_channel_permission(
             self._state.http,
             channel_id=self.id,
             overwrite_id=extract_int(id),
-            reason=reason
+            reason=reason,
         )
 
     # TODO: Invites
@@ -306,9 +342,7 @@ class GuildChannel(Channel):
 
     async def _edit(self, **kwargs: Any) -> dict:
         return await res.modify_guild_channel(
-            self._state.http,
-            channel_id=self.id,
-            **kwargs
+            self._state.http, channel_id=self.id, **kwargs
         )
 
     async def edit(
@@ -318,13 +352,16 @@ class GuildChannel(Channel):
         position: U[int] = UNSET,
         permission_overwrites: U[Iterable[PermissionOverwrite]] = UNSET,
     ) -> _GC:
-        return self.from_json(self._state, await self._edit(
-            name=name,
-            position=position,
-            permission_overwrites=
-                UNSET if isinstance(permission_overwrites, _UNSET)
-                else [o.to_json() for o in permission_overwrites]
-        ))
+        return self.from_json(
+            self._state,
+            await self._edit(
+                name=name,
+                position=position,
+                permission_overwrites=UNSET
+                if isinstance(permission_overwrites, _UNSET)
+                else [o.to_json() for o in permission_overwrites],
+            ),
+        )
 
 
 @dataclass
@@ -332,6 +369,7 @@ class HasPosition(Channel):
     """
     Mixin signalling that a channel has a position in some ordered list
     """
+
     position: int
 
 
@@ -340,6 +378,7 @@ class GuildTextChannel(TextChannel, GuildChannel, HasPosition):
     """
     Ordinary text channel in a guild, denoted in Discord as #<name>.
     """
+
     category_id: Optional[int]
     topic: Optional[str]
     slowmode_seconds: int
@@ -354,7 +393,7 @@ class GuildTextChannel(TextChannel, GuildChannel, HasPosition):
             channel_id=self.id,
             name=name,
             type=11,
-            auto_archive_duration=auto_archive_duration
+            auto_archive_duration=auto_archive_duration,
         )
 
     async def start_private_thread(
@@ -367,7 +406,7 @@ class GuildTextChannel(TextChannel, GuildChannel, HasPosition):
             channel_id=self.id,
             name=name,
             type=12,
-            auto_archive_duration=auto_archive_duration
+            auto_archive_duration=auto_archive_duration,
         )
 
     async def edit(
@@ -385,18 +424,21 @@ class GuildTextChannel(TextChannel, GuildChannel, HasPosition):
         if isinstance(category, Category):
             category = category.id
 
-        return self.from_json(self._state, await self._edit(
-            name=name,
-            position=position,
-            topic=topic,
-            nsfw=nsfw,
-            rate_limit_per_user=slowmode_seconds,
-            category=category,
-            default_auto_archive_duration=default_auto_archive_duration_minutes,
-            permission_overwrites=
-                UNSET if isinstance(permission_overwrites, _UNSET)
-                else [o.to_json() for o in permission_overwrites]
-        ))
+        return self.from_json(
+            self._state,
+            await self._edit(
+                name=name,
+                position=position,
+                topic=topic,
+                nsfw=nsfw,
+                rate_limit_per_user=slowmode_seconds,
+                category=category,
+                default_auto_archive_duration=default_auto_archive_duration_minutes,
+                permission_overwrites=UNSET
+                if isinstance(permission_overwrites, _UNSET)
+                else [o.to_json() for o in permission_overwrites],
+            ),
+        )
 
     async def make_into_news_channel(self) -> "NewsChannel":
         return NewsChannel.from_json(self._state, await self._edit(type=5))
@@ -411,7 +453,7 @@ class GuildTextChannel(TextChannel, GuildChannel, HasPosition):
             guild_id=int(json["guild_id"]),
             category_id=nullmap(json.get("parent_id"), int),
             topic=json.get("topic"),
-            slowmode_seconds=int(json["rate_limit_per_user"])
+            slowmode_seconds=int(json["rate_limit_per_user"]),
         )
 
 
@@ -427,6 +469,7 @@ class NewsChannel(TextChannel, GuildChannel, HasPosition):
     - A user who is allowed to send a message in the news channel can publish it.
       In that case, this message is executed on all follower webhooks.
     """
+
     # TODO: following
 
     category_id: Optional[int]
@@ -442,7 +485,7 @@ class NewsChannel(TextChannel, GuildChannel, HasPosition):
             channel_id=self.id,
             name=name,
             type=10,
-            auto_archive_duration=auto_archive_duration
+            auto_archive_duration=auto_archive_duration,
         )
 
     async def edit(
@@ -459,17 +502,20 @@ class NewsChannel(TextChannel, GuildChannel, HasPosition):
         if isinstance(category, Category):
             category = category.id
 
-        return self.from_json(self._state, await self._edit(
-            name=name,
-            position=position,
-            topic=topic,
-            nsfw=nsfw,
-            category=category,
-            default_auto_archive_duration=default_auto_archive_duration_minutes,
-            permission_overwrites=
-                UNSET if isinstance(permission_overwrites, _UNSET)
-                else [o.to_json() for o in permission_overwrites]
-        ))
+        return self.from_json(
+            self._state,
+            await self._edit(
+                name=name,
+                position=position,
+                topic=topic,
+                nsfw=nsfw,
+                category=category,
+                default_auto_archive_duration=default_auto_archive_duration_minutes,
+                permission_overwrites=UNSET
+                if isinstance(permission_overwrites, _UNSET)
+                else [o.to_json() for o in permission_overwrites],
+            ),
+        )
 
     async def make_into_text_channel(self) -> GuildTextChannel:
         return GuildTextChannel.from_json(self._state, await self._edit(type=0))
@@ -492,6 +538,7 @@ class VoiceChannel(GuildChannel):
     """
     Either a 'normal' voice channel or a stage channel.
     """
+
     bitrate: int
     user_limit: int
     rtc_region: Optional[str]
@@ -502,10 +549,12 @@ class NormalVoiceChannel(VoiceChannel, HasPosition):
     """
     Channel where users can communicate via voice and/or video.
     """
+
     video_quality_mode: Optional[VideoQualityMode]
 
     async def edit(
-        self, *,
+        self,
+        *,
         name: U[str] = UNSET,
         position: U[int] = UNSET,
         category: U[Union["Category", int]] = UNSET,
@@ -517,17 +566,20 @@ class NormalVoiceChannel(VoiceChannel, HasPosition):
         if isinstance(category, Category):
             category = category.id
 
-        return self.from_json(self._state, await self._edit(
-            name=name,
-            position=position,
-            category=category,
-            default_auto_archive_duration=default_auto_archive_duration_minutes,
-            permission_overwrites=
-                UNSET if isinstance(permission_overwrites, _UNSET)
+        return self.from_json(
+            self._state,
+            await self._edit(
+                name=name,
+                position=position,
+                category=category,
+                default_auto_archive_duration=default_auto_archive_duration_minutes,
+                permission_overwrites=UNSET
+                if isinstance(permission_overwrites, _UNSET)
                 else [o.to_json() for o in permission_overwrites],
-            bitrate=bitrate,
-            video_quality_mode=video_quality_mode
-        ))
+                bitrate=bitrate,
+                video_quality_mode=video_quality_mode,
+            ),
+        )
 
     @classmethod
     def from_json(cls, state: State, json: dict) -> "NormalVoiceChannel":
@@ -540,7 +592,7 @@ class NormalVoiceChannel(VoiceChannel, HasPosition):
             bitrate=json["bitrate"],
             user_limit=json["user_limit"],
             rtc_region=json.get("rtc_region"),
-            video_quality_mode=VideoQualityMode(json["video_qualify_mode"])
+            video_quality_mode=VideoQualityMode(json["video_qualify_mode"]),
         )
 
 
@@ -549,6 +601,7 @@ class Stage(VoiceChannel, HasPosition):
     """
     Stage channel for one-to-many communication.
     """
+
     topic: Optional[str]
 
     @classmethod
@@ -562,7 +615,7 @@ class Stage(VoiceChannel, HasPosition):
             bitrate=json["bitrate"],
             user_limit=json["user_limit"],
             rtc_region=json.get("rtc_region"),
-            topic=json.get("topic")
+            topic=json.get("topic"),
         )
 
 
@@ -582,6 +635,7 @@ class _ThreadMemberObj:
     """
     Reference: <https://discord.com/developers/docs/resources/channel#thread-member-object>
     """
+
     thread_id: int
     user_id: int
     join_timestamp: datetime
@@ -602,21 +656,18 @@ class ThreadMembers:
     """
     Helper object for working with thread members
     """
+
     id: int
     _state: State
 
     async def add(self, member: Union[Snowflake, int]):
         await res.add_thread_member(
-            self._state.http,
-            channel_id=self.id,
-            user_id=extract_int(member)
+            self._state.http, channel_id=self.id, user_id=extract_int(member)
         )
 
     async def remove(self, member: Union[Snowflake, int]):
         await res.add_thread_member(
-            self._state.http,
-            channel_id=self.id,
-            user_id=extract_int(member)
+            self._state.http, channel_id=self.id, user_id=extract_int(member)
         )
 
     async def fetch(self) -> AsyncIterator[Member]:
@@ -633,6 +684,7 @@ class Thread(TextChannel, GuildChannel):
     """
     Temporary sub-channel inside a text channel.
     """
+
     parent_channel_id: int
     slowmode_seconds: int
     owner_id: int
@@ -660,18 +712,21 @@ class Thread(TextChannel, GuildChannel):
         auto_archive_duration: U[AutoArchiveDuration] = UNSET,
         locked: U[bool] = UNSET,
         invitable: U[bool] = UNSET,
-        slowmode_seconds:  U[int] = UNSET,
+        slowmode_seconds: U[int] = UNSET,
     ) -> _TC:
-        return self.from_json(self._state, await res.modify_thread_channel(
-            http=self._state.http,
-            channel_id=self.id,
-            name=name,
-            archived=archived,
-            auto_archive_duration=auto_archive_duration,
-            locked=locked,
-            invitable=invitable,
-            rate_limit_per_user=slowmode_seconds,
-        ))
+        return self.from_json(
+            self._state,
+            await res.modify_thread_channel(
+                http=self._state.http,
+                channel_id=self.id,
+                name=name,
+                archived=archived,
+                auto_archive_duration=auto_archive_duration,
+                locked=locked,
+                invitable=invitable,
+                rate_limit_per_user=slowmode_seconds,
+            ),
+        )
 
     @classmethod
     def from_json(cls: Type[_TC], state: State, json: dict) -> _TC:
@@ -685,9 +740,9 @@ class Thread(TextChannel, GuildChannel):
             owner_id=int(json["owner_id"]),
             joined_at=nullmap(
                 json.get("member"),
-                lambda member_obj: datetime.fromisoformat(member_obj["join_timestamp"])
+                lambda member_obj: datetime.fromisoformat(member_obj["join_timestamp"]),
             ),
-            **_parse_thread_metadata(json)
+            **_parse_thread_metadata(json),
         )
 
 
@@ -702,6 +757,7 @@ class PrivateThread(Thread):
     """
     Private thread created on a guild text channel
     """
+
     invitable: bool
 
 
@@ -737,7 +793,8 @@ class StoreChannel(GuildChannel, HasPosition):
     # easily available for testing
 
     async def edit(
-        self, *,
+        self,
+        *,
         name: U[str] = UNSET,
         nsfw: U[bool] = UNSET,
         category: U[Union[Category, int]] = UNSET,
@@ -747,15 +804,18 @@ class StoreChannel(GuildChannel, HasPosition):
         if isinstance(category, Category):
             category = category.id
 
-        return self.from_json(self._state, await self._edit(
-            name=name,
-            position=position,
-            permission_overwrites=
-                UNSET if isinstance(permission_overwrites, _UNSET)
+        return self.from_json(
+            self._state,
+            await self._edit(
+                name=name,
+                position=position,
+                permission_overwrites=UNSET
+                if isinstance(permission_overwrites, _UNSET)
                 else [o.to_json() for o in permission_overwrites],
-            nsfw=nsfw,
-            category=category,
-        ))
+                nsfw=nsfw,
+                category=category,
+            ),
+        )
 
     @classmethod
     def from_json(cls, state: State, json: dict) -> "StoreChannel":
@@ -778,5 +838,5 @@ _CHANNEL_TYPE_TO_CLASS: Dict[int, Type[Channel]] = {
     10: NewsChannelThread,
     11: PublicThread,
     12: PrivateThread,
-    13: Stage
+    13: Stage,
 }

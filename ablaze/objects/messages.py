@@ -1,9 +1,10 @@
 from abc import ABC, abstractmethod
-from ablaze.objects.utils import extract_int
 from dataclasses import dataclass
-from ablaze.internal.http.file import File
 from typing import Any, Dict, Optional, Sequence, Union
+
+from ablaze.internal.http.file import File
 from ablaze.objects.abc import Snowflake
+from ablaze.objects.utils import extract_int
 
 
 @dataclass
@@ -14,7 +15,8 @@ class RenderedMessageContent:
 
 class BaseMessageContent(ABC):
     @abstractmethod
-    def render(self) -> RenderedMessageContent: ...
+    def render(self) -> RenderedMessageContent:
+        ...
 
     def in_reply_to(self, to: Union[Snowflake, int]) -> "MessageContentWithReference":
         return MessageContentWithReference(self, to)
@@ -63,7 +65,7 @@ class MessageContentWithReference(BaseMessageContent):
             **rendered_base.json,
             "message_reference": {
                 "message_id": extract_int(self.message_reference),
-            }
+            },
         }
         return RenderedMessageContent(json=json, file=rendered_base.file)
 
@@ -75,7 +77,4 @@ class Message(Snowflake):
 
     @staticmethod
     def from_json(json: dict) -> "Message":
-        return Message(
-            id=int(json["id"]),
-            text=json.get("content")
-        )
+        return Message(id=int(json["id"]), text=json.get("content"))

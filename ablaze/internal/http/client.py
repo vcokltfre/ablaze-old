@@ -270,8 +270,8 @@ class RESTClient:
             for file in req.files:
                 if not isinstance(file, File):
                     raise TypeError(
-                            f"Files must be of type ablaze.File, not {file.__class__.__qualname__}"
-                        )
+                        f"Files must be of type ablaze.File, not {file.__class__.__qualname__}"
+                    )
                 file.reset()
                 data.add_field(
                     f"file_{file.filename}", file.file, filename=file.filename
@@ -279,7 +279,9 @@ class RESTClient:
 
             # HACK: this is only used by endpoints that send messages, revisit later for a more general solution
             if req.json is not UNSET:
-                data.add_field("payload_json", dumps(req.json), content_type="application/json")
+                data.add_field(
+                    "payload_json", dumps(req.json), content_type="application/json"
+                )
 
             req.params["data"] = data
         elif req.json is not UNSET:
@@ -290,7 +292,9 @@ class RESTClient:
         async with bucket:
             return await self._make_rate_limited_request(req, bucket)
 
-    async def _make_rate_limited_request(self, req: _Request, bucket: BucketLock) -> _Response:
+    async def _make_rate_limited_request(
+        self, req: _Request, bucket: BucketLock
+    ) -> _Response:
         response = await self.session.request(
             req.method,
             req.route.url,

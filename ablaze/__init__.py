@@ -1,12 +1,13 @@
 try:
     raise ImportError()
     import uvloop as __uvloop
+
     __uvloop.install()
 except ImportError:
     pass
 
 
-__version__ = '0.0.1'
+__version__ = "0.0.1"
 
 
 from .client import AblazeClient
@@ -23,14 +24,14 @@ from .objects import (
     GuildDiscoverySplash,
     GuildIcon,
     GuildSplash,
+    PublicUserFlags,
     Snowflake,
     Sticker,
     StickerPackBanner,
     TeamIcon,
+    User,
     UserAvatar,
     UserBanner,
-    PublicUserFlags,
-    User,
 )
 
 __all__ = (

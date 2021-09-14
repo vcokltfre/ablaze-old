@@ -34,15 +34,18 @@ class Webhook(Snowflake):
         self: _W,
         name: Union[str, _UNSET] = UNSET,
         avatar_hash: Union[str, _UNSET] = UNSET,
-        channel: Union[Snowflake, int, _UNSET] = UNSET
+        channel: Union[Snowflake, int, _UNSET] = UNSET,
     ) -> _W:
-        return self.from_json(self._http, await res.modify_webhook(
+        return self.from_json(
             self._http,
-            webhook_id=self.id,
-            name=name,
-            avatar=avatar_hash,
-            channel_id=channel.id if isinstance(channel, Snowflake) else channel,
-        ))
+            await res.modify_webhook(
+                self._http,
+                webhook_id=self.id,
+                name=name,
+                avatar=avatar_hash,
+                channel_id=channel.id if isinstance(channel, Snowflake) else channel,
+            ),
+        )
 
     @staticmethod
     def from_json(client: RESTClient, json: dict) -> "Webhook":
@@ -75,7 +78,9 @@ class SourceGuild(Snowflake):
 
     @staticmethod
     def from_json(json: dict) -> "SourceGuild":
-        return SourceGuild(id=int(json["int"]), name=json["name"], icon_hash=json["icon"])
+        return SourceGuild(
+            id=int(json["int"]), name=json["name"], icon_hash=json["icon"]
+        )
 
 
 @dataclass
@@ -83,12 +88,13 @@ class IncomingWebhook(Webhook):
     """
     'Normal' webhook created in the 'manage channel' screen.
     """
+
     token: str
 
     async def send(
         self,
         content: "messages.BaseMessageContent",
-        thread: Union[Snowflake, int, _UNSET] = UNSET
+        thread: Union[Snowflake, int, _UNSET] = UNSET,
     ) -> "messages.Message":
         """Execute the webhook.
 
@@ -115,7 +121,7 @@ class IncomingWebhook(Webhook):
     async def send_nowait(
         self,
         content: "messages.BaseMessageContent",
-        thread: Union[Snowflake, int, _UNSET] = UNSET
+        thread: Union[Snowflake, int, _UNSET] = UNSET,
     ) -> None:
         """Execute the webhook, but don't wait for a response.
 
@@ -140,14 +146,14 @@ class IncomingWebhook(Webhook):
     @staticmethod
     def from_json(client: RESTClient, json: dict) -> "IncomingWebhook":
         return IncomingWebhook(
-            **super().from_json(client, json).__dict__,
-            token=json["token"]
+            **super().from_json(client, json).__dict__, token=json["token"]
         )
 
 
 @dataclass
 class ChannelFollowerWebhook(Webhook):
     """Internal webhook that Discord uses to implement following a news channel"""
+
     channel_id: int
     guild_id: int
     source_channel: SourceChannel
@@ -165,6 +171,7 @@ class ChannelFollowerWebhook(Webhook):
 @dataclass
 class ApplicationWebhook(Webhook):
     """Application webhooks are webhooks used with Interactions."""
+
     application_id: int  # should always be non-None
 
     @staticmethod

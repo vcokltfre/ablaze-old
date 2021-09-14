@@ -1,8 +1,8 @@
 from dataclasses import dataclass
-from typing import Union, Optional
+from typing import Optional, Union
 
 from .abc import Snowflake
-from .assets import UserAvatar, DefaultUserAvatar, UserBanner
+from .assets import DefaultUserAvatar, UserAvatar, UserBanner
 from .flags import PublicUserFlags
 
 
@@ -40,7 +40,7 @@ class User(Snowflake):
             banner=banner,
             bot=json.get("bot", False),
             public_flags=PublicUserFlags(json.get("public_flags", 0)),
-            accent_colour=json.get("accent_colour", 0)
+            accent_colour=json.get("accent_colour", 0),
         )
 
     def __str__(self) -> str:

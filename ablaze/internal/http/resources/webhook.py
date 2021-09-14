@@ -140,7 +140,9 @@ async def execute_webhook(
 
     # The `wait` flag specifies whether Discord should confirm the execution
     # by returning a message object back.
-    result = await http.post(route, files=[file], json=params, qparams=qparams, format="text")
+    result = await http.post(
+        route, files=[file], json=params, qparams=qparams, format="text"
+    )
     if result:
         return loads(result)
     else:
