@@ -19,7 +19,7 @@ Ablaze is designed with one primary core value in mind: it should be easy to use
 
 ### What does this mean?
 
-Essentially, there shouldn't be any 'sharp corners' that people get stuck on because they are weird or don't conform to what's expected. Consistency is key to simplicity. Let's say, for example, we have the classes `Channel` and `User`, broth of which have a `send()` method to send a message. It would make little sense, given that context, to name the name method on a `Webhook` object something like `send_message()`.
+Essentially, there shouldn't be any 'sharp corners' that people get stuck on because they are weird or don't conform to what's expected. Consistency is key to simplicity. Let's say, for example, we have the classes `Channel` and `User`, both of which have a `send()` method to send a message. It would make little sense, given that context, to name the name method on a `Webhook` object something like `send_message()`.
 
 There will, as with anything, be things that are not intuitively understood by everyone using the library, and for that reason this section exists, to clarify exactly what the library does, how, and why.
 
