@@ -8,6 +8,7 @@ class AblazeError(Exception):
 class HTTPError(AblazeError):
     def __init__(self, response: ClientResponse, *args) -> None:
         self.response = response
+        self.status = response.status
 
         super().__init__(*args)
 
